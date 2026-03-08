@@ -1,4 +1,5 @@
 ﻿using MyToDo.Common.Models;
+using MyToDo.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,14 +9,43 @@ namespace MyToDo.ViewModels
 {
     public class MainViewModel : BindableBase
     {
-        public MainViewModel()
+        public MainViewModel(IRegionManager regionManager)
         {
             CreateMenuBar();
+            NavigateCommand = new DelegateCommand<MenuBar>(Navigate);
+            GoBackCommand= new DelegateCommand(() =>
+            {
+                if (journal != null && journal.CanGoBack)
+                {
+                    journal.GoBack();
+                }
+            });
+            GoForwardCommand= new DelegateCommand(() =>
+            {
+                if (journal != null && journal.CanGoForward)
+                {
+                    journal.GoForward();
+                }
+            });
+            this.regionManager = regionManager;
         }
+
+        private void Navigate(MenuBar bar)
+        { 
+            regionManager.Regions[PrismManager.MainViewRegionName].RequestNavigate(bar.NameSpace, back =>
+            {
+                journal = back.Context.NavigationService.Journal;
+            });
+        }
+        private readonly IRegionManager regionManager;
+        public DelegateCommand<MenuBar> NavigateCommand { get; set; }
+
+
+        public DelegateCommand GoBackCommand { get; set; }
+        public DelegateCommand GoForwardCommand { get; set; }
+
+        private IRegionNavigationJournal journal;
         private ObservableCollection<MenuBar> menuBars;
-
-
-
         public ObservableCollection<MenuBar> MenuBars
         {
             get { return menuBars; }

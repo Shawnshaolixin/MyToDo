@@ -1,4 +1,5 @@
-﻿using MyToDo.Views;
+﻿using MyToDo.ViewModels;
+using MyToDo.Views;
 using System.Configuration;
 using System.Data;
 using System.Windows;
@@ -12,11 +13,15 @@ namespace MyToDo
     {
         protected override Window CreateShell()
         {
-             return Container.Resolve<MainView>();
+            return Container.Resolve<MainView>();
         }
         override protected void RegisterTypes(IContainerRegistry containerRegistry)
         {
             // Register any types or services here
+            containerRegistry.RegisterForNavigation<IndexView, IndexViewModel>();
+            containerRegistry.RegisterForNavigation<ToDoView, ToDoViewModel>();
+            containerRegistry.RegisterForNavigation<MemoView, MemoViewModel>();
+            containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
         }
     }
 }
