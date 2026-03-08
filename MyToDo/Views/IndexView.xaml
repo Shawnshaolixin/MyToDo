@@ -79,14 +79,16 @@
                         <materialDesign:PackIcon Kind="Add"></materialDesign:PackIcon>
                     </Button>
                 </DockPanel>
-                <ListBox ScrollViewer.VerticalScrollBarVisibility="Hidden"    ItemsSource="{Binding ToDoDtos}">
+                <ListBox HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Hidden"    ItemsSource="{Binding ToDoDtos}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="10">
+                            <DockPanel Margin="10" LastChildFill="False">
+                                <ToggleButton DockPanel.Dock="Right"/>
+                                <StackPanel >
                                 <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold"/>
                                 <TextBlock Text="{Binding Content}" Margin="0,5"/>
                             </StackPanel>
-
+                            </DockPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
