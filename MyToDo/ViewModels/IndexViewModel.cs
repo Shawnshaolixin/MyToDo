@@ -6,12 +6,14 @@ using System.Text;
 
 namespace MyToDo.ViewModels
 {
-    public class IndexViewModel:BindableBase
+    public class IndexViewModel : BindableBase
     {
 
         public IndexViewModel()
         {
             CreateTaskBars();
+            CreateToDoDtos();
+            CreateMemoDtos();
         }
         private ObservableCollection<TaskBar> taskBars;
 
@@ -21,6 +23,22 @@ namespace MyToDo.ViewModels
             set { taskBars = value; RaisePropertyChanged(); }
         }
 
+        private ObservableCollection<ToDoDto> toDoDtos;
+
+        public ObservableCollection<ToDoDto> ToDoDtos
+        {
+            get { return toDoDtos; }
+            set { toDoDtos = value; RaisePropertyChanged(); }
+        }
+
+
+        private ObservableCollection<MemoDto> memoDtos;
+
+        public ObservableCollection<MemoDto> MemoDtos
+        {
+            get { return memoDtos; }
+            set { memoDtos = value; RaisePropertyChanged(); }
+        }
         void CreateTaskBars()
         {
             TaskBars = new ObservableCollection<TaskBar>
@@ -30,7 +48,29 @@ namespace MyToDo.ViewModels
                 new TaskBar{Icon="ChartLineVariant",Title="完成率",Content="100%",Color="#FF02C6DC",Target=2},
                 new TaskBar{Icon="PlaylistStar",Title="备忘录",Content="联系人内容",Color="#FFFFA000",Target=3},
             };
-        }   
+        }
+
+        void CreateToDoDtos()
+        {
+            ToDoDtos = new ObservableCollection<ToDoDto>
+            {
+                new ToDoDto{Title="吃饭",Content="吃饭了",Status=0},
+                new ToDoDto{Title="睡觉",Content="睡觉了",Status=0},
+                new ToDoDto{Title="打豆豆",Content="打豆豆了",Status=0},
+                new ToDoDto{Title="打豆豆",Content="打豆豆了",Status=0},
+                new ToDoDto{Title="打豆豆",Content="打豆豆了",Status=0},
+            };
+        }
+        void CreateMemoDtos()
+        {
+            MemoDtos = new ObservableCollection<MemoDto>
+            {
+                new MemoDto{Title="吃饭",Content="吃饭了",Status=0},
+                new MemoDto{Title="睡觉",Content="睡觉了",Status=0},
+                new MemoDto{Title="打豆豆",Content="打豆豆了",Status=0},
+                new MemoDto {Title="打豆豆",Content="打豆豆了",Status=0}, 
+            };
+        }
 
     }
 }

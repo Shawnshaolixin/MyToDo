@@ -26,6 +26,24 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Margin="10" Background="{Binding Color}" CornerRadius="5">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect Color="#DDDDDD"
+                                                                  ShadowDepth="1"
+                                                                  BlurRadius="10">
+                                                    
+                                                </DropShadowEffect>
+                                            </Setter.Value>
+                                        </Setter>
+                                        
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <Grid>
                             <StackPanel Margin="20,10">
                                 <materialDesign:PackIcon Kind="{Binding Icon}" Width="30" Height="30"  Margin="15,0"/>
@@ -52,28 +70,48 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Margin="10,0" CornerRadius="5" Background="#BEBEBE" Opacity="0.1"></Border>
+            <Border Margin="10,0" CornerRadius="5" Background="#BEBEBE" Opacity="0.1"/>
 
             <DockPanel Margin="10,0">
                 <DockPanel Margin="10,5" DockPanel.Dock="Top" LastChildFill="False">
                     <TextBlock Text="待办事项" FontSize="20" FontWeight="Bold"></TextBlock>
                     <Button Width="30" Height="30"   DockPanel.Dock="Right" VerticalAlignment="Top" Style="{StaticResource MaterialDesignFloatingActionButton}" >
-
                         <materialDesign:PackIcon Kind="Add"></materialDesign:PackIcon>
                     </Button>
                 </DockPanel>
+                <ListBox ScrollViewer.VerticalScrollBarVisibility="Hidden"    ItemsSource="{Binding ToDoDtos}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="10">
+                                <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding Content}" Margin="0,5"/>
+                            </StackPanel>
+
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </DockPanel>
-            
-            
+    
+
             <Border Grid.Column="1" Margin="10,0" CornerRadius="5" Background="#BEBEBE" Opacity="0.1"></Border>
             <DockPanel Grid.Column="1"  Margin="10,0">
                 <DockPanel Margin="10,5" DockPanel.Dock="Top" LastChildFill="False">
-                    <TextBlock Text="待办事项" FontSize="20" FontWeight="Bold"></TextBlock>
+                    <TextBlock Text="备忘录" FontSize="20" FontWeight="Bold"></TextBlock>
                     <Button Width="30" Height="30"   DockPanel.Dock="Right" VerticalAlignment="Top" Style="{StaticResource MaterialDesignFloatingActionButton}" >
 
                         <materialDesign:PackIcon Kind="Add"></materialDesign:PackIcon>
                     </Button>
                 </DockPanel>
+                <ListBox ItemsSource="{Binding MemoDtos}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate> 
+                                <StackPanel Margin="10">
+                                    <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Content}" Margin="0,5"/>
+                                </StackPanel> 
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox> 
             </DockPanel>
         </Grid>
     </Grid>
