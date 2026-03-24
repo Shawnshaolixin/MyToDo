@@ -4,9 +4,82 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:MyToDo.Views"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            <TextBox Text="MemoView" FontSize="80" />
-    </Grid>
+
+    <md:DialogHost>
+        <md:DrawerHost IsRightDrawerOpen="{Binding IsRightDrawerOpen}">
+            <md:DrawerHost.RightDrawerContent>
+                <DockPanel Width="300" LastChildFill="False" Margin="10">
+                    <TextBlock Text="添加备忘录" FontSize="20" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,10"/>
+                    <TextBox md:HintAssist.Hint="请输入备忘录标题"
+                             Text="{Binding CurrentTitle, UpdateSourceTrigger=PropertyChanged}"
+                             DockPanel.Dock="Top" Margin="0,5"/>
+                    <TextBox md:HintAssist.Hint="请输入备忘录内容"
+                             Text="{Binding CurrentContent, UpdateSourceTrigger=PropertyChanged}"
+                             DockPanel.Dock="Top" Margin="0,5"
+                             AcceptsReturn="True" MinLines="3" TextWrapping="Wrap"/>
+                    <Button Content="添加" Command="{Binding SaveCommand}"
+                            DockPanel.Dock="Top" Margin="0,10"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource MaterialDesignRaisedButton}"/>
+                </DockPanel>
+            </md:DrawerHost.RightDrawerContent>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="15,0,0,0" Orientation="Horizontal">
+                    <TextBox Width="250" md:HintAssist.Hint="查找备忘录..."
+                             md:TextFieldAssist.HasClearButton="True"
+                             Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"/>
+                    <Button Content="搜索" Command="{Binding SearchCommand}"
+                            Margin="5,0" Style="{StaticResource MaterialDesignFlatButton}"/>
+                </StackPanel>
+
+                <Button Margin="10,5" Command="{Binding AddCommand}" HorizontalAlignment="Right" Content="+添加备忘录"/>
+
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding MemoDtos}" HorizontalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid
+                                MinWidth="220"
+                                MinHeight="180"
+                                MaxHeight="250"
+                                Margin="8">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <md:PopupBox HorizontalAlignment="Right" Panel.ZIndex="1">
+                                    <Button Content="删除" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"/>
+                                </md:PopupBox>
+
+                                <Border CornerRadius="4" Grid.RowSpan="2" Background="#FFFFA000"/>
+                                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" Margin="10,5"/>
+                                <TextBlock Text="{Binding Content}" Grid.Row="1" Margin="10,5" TextWrapping="Wrap"/>
+
+                                <Canvas Grid.RowSpan="2" ClipToBounds="True">
+                                    <Border CornerRadius="100" Canvas.Top="10" Canvas.Right="-50" Width="120" Height="120" Background="#FFFFFF" Opacity="0.1"/>
+                                    <Border CornerRadius="100" Canvas.Top="80" Canvas.Right="-30" Width="120" Height="120" Background="#FFFFFF" Opacity="0.1"/>
+                                </Canvas>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </md:DrawerHost>
+    </md:DialogHost>
+
 </UserControl>
