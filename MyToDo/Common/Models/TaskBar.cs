@@ -32,6 +32,7 @@ namespace MyToDo.Common.Models
             set
             {
                 content = value;
+                RaisePropertyChanged();
             }
         }
 

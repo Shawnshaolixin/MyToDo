@@ -1,4 +1,5 @@
 ﻿using MyToDo.Common.Models;
+using MyToDo.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,6 +9,8 @@ namespace MyToDo.ViewModels
 {
     public class ToDoViewModel : BindableBase
     {
+        private readonly IToDoService _toDoService;
+
         private bool isRightDrawerOpen;
         public bool IsRightDrawerOpen
         {
@@ -26,7 +29,7 @@ namespace MyToDo.ViewModels
         public int FilterIndex
         {
             get { return filterIndex; }
-            set { filterIndex = value; RaisePropertyChanged(); ApplyFilter(); }
+            set { filterIndex = value; RaisePropertyChanged(); _ = LoadToDosAsync(); }
         }
 
         private int currentStatus;
@@ -50,6 +53,13 @@ namespace MyToDo.ViewModels
             set { currentContent = value; RaisePropertyChanged(); }
         }
 
+        private ToDoDto currentDto;
+        public ToDoDto CurrentDto
+        {
+            get { return currentDto; }
+            set { currentDto = value; RaisePropertyChanged(); }
+        }
+
         private ObservableCollection<ToDoDto> toDoDtos;
         public ObservableCollection<ToDoDto> ToDoDtos
         {
@@ -57,86 +67,89 @@ namespace MyToDo.ViewModels
             set { toDoDtos = value; RaisePropertyChanged(); }
         }
 
-        private ObservableCollection<ToDoDto> allToDoDtos;
-
         public DelegateCommand AddCommand { get; set; }
         public DelegateCommand SaveCommand { get; set; }
         public DelegateCommand<ToDoDto> DeleteCommand { get; set; }
         public DelegateCommand SearchCommand { get; set; }
 
-        public ToDoViewModel()
+        public ToDoViewModel(IToDoService toDoService)
         {
-            CreateToDoDtos();
+            _toDoService = toDoService;
+            ToDoDtos = new ObservableCollection<ToDoDto>();
 
             AddCommand = new DelegateCommand(() =>
             {
                 CurrentTitle = string.Empty;
                 CurrentContent = string.Empty;
                 CurrentStatus = 0;
+                CurrentDto = null;
                 IsRightDrawerOpen = true;
             });
 
-            SaveCommand = new DelegateCommand(() =>
+            SaveCommand = new DelegateCommand(async () =>
             {
                 if (string.IsNullOrWhiteSpace(CurrentTitle))
                     return;
-                var todo = new ToDoDto
+                try
                 {
-                    Title = CurrentTitle,
-                    Content = CurrentContent,
-                    Status = CurrentStatus
-                };
-                allToDoDtos.Add(todo);
-                ApplyFilter();
-                IsRightDrawerOpen = false;
+                    ApiResponse<ToDoDto> result;
+                    if (CurrentDto != null && CurrentDto.Id > 0)
+                    {
+                        CurrentDto.Title = CurrentTitle;
+                        CurrentDto.Content = CurrentContent;
+                        CurrentDto.Status = CurrentStatus;
+                        result = await _toDoService.UpdateAsync(CurrentDto);
+                    }
+                    else
+                    {
+                        var dto = new ToDoDto
+                        {
+                            Title = CurrentTitle,
+                            Content = CurrentContent,
+                            Status = CurrentStatus
+                        };
+                        result = await _toDoService.AddAsync(dto);
+                    }
+
+                    if (result.Status)
+                    {
+                        IsRightDrawerOpen = false;
+                        await LoadToDosAsync();
+                    }
+                }
+                catch { /* network errors are handled in service layer */ }
             });
 
-            DeleteCommand = new DelegateCommand<ToDoDto>(todo =>
+            DeleteCommand = new DelegateCommand<ToDoDto>(async todo =>
             {
                 if (todo != null)
                 {
-                    allToDoDtos.Remove(todo);
-                    ToDoDtos.Remove(todo);
+                    try
+                    {
+                        var result = await _toDoService.DeleteAsync(todo.Id);
+                        if (result.Status)
+                            ToDoDtos.Remove(todo);
+                    }
+                    catch { /* network errors are handled in service layer */ }
                 }
             });
 
-            SearchCommand = new DelegateCommand(ApplyFilter);
+            SearchCommand = new DelegateCommand(async () => await LoadToDosAsync());
+
+            _ = LoadToDosAsync();
         }
 
-        void ApplyFilter()
+        private async Task LoadToDosAsync()
         {
-            // FilterIndex: 0=全部(All), 1=待办(Pending, Status=0), 2=已完成(Completed, Status=1)
-            const int StatusPending = 0;
-            const int StatusCompleted = 1;
-
-            var keyword = (Search ?? string.Empty).Trim().ToLower();
-            var filtered = new ObservableCollection<ToDoDto>();
-            foreach (var item in allToDoDtos)
+            int? statusFilter = FilterIndex switch
             {
-                // Status filter
-                if (FilterIndex == 1 && item.Status != StatusPending) continue;
-                if (FilterIndex == 2 && item.Status != StatusCompleted) continue;
-
-                // Keyword filter
-                if (!string.IsNullOrEmpty(keyword))
-                {
-                    if ((item.Title == null || !item.Title.ToLower().Contains(keyword)) &&
-                        (item.Content == null || !item.Content.ToLower().Contains(keyword)))
-                        continue;
-                }
-                filtered.Add(item);
-            }
-            ToDoDtos = filtered;
-        }
-
-        void CreateToDoDtos()
-        {
-            allToDoDtos = new ObservableCollection<ToDoDto>();
-            for (int i = 0; i < 20; i++)
-            {
-                allToDoDtos.Add(new ToDoDto { Title = $"吃饭{i}", Content = $"吃饭了{i}", Status = 0 });
-            }
-            ApplyFilter();
+                1 => 0,
+                2 => 1,
+                _ => null
+            };
+            var result = await _toDoService.GetAllAsync(Search, statusFilter);
+            if (result.Status && result.Result != null)
+                ToDoDtos = new ObservableCollection<ToDoDto>(result.Result);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using MyToDo.Common.Models;
+using MyToDo.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,6 +9,8 @@ namespace MyToDo.ViewModels
 {
     public class MemoViewModel : BindableBase
     {
+        private readonly IMemoService _memoService;
+
         private bool isRightDrawerOpen;
         public bool IsRightDrawerOpen
         {
@@ -36,6 +39,13 @@ namespace MyToDo.ViewModels
             set { currentContent = value; RaisePropertyChanged(); }
         }
 
+        private MemoDto currentDto;
+        public MemoDto CurrentDto
+        {
+            get { return currentDto; }
+            set { currentDto = value; RaisePropertyChanged(); }
+        }
+
         private ObservableCollection<MemoDto> memoDtos;
         public ObservableCollection<MemoDto> MemoDtos
         {
@@ -43,81 +53,81 @@ namespace MyToDo.ViewModels
             set { memoDtos = value; RaisePropertyChanged(); }
         }
 
-        private ObservableCollection<MemoDto> allMemoDtos;
-
         public DelegateCommand AddCommand { get; set; }
         public DelegateCommand SaveCommand { get; set; }
         public DelegateCommand<MemoDto> DeleteCommand { get; set; }
         public DelegateCommand SearchCommand { get; set; }
 
-        public MemoViewModel()
+        public MemoViewModel(IMemoService memoService)
         {
-            CreateMemoDtos();
+            _memoService = memoService;
+            MemoDtos = new ObservableCollection<MemoDto>();
 
             AddCommand = new DelegateCommand(() =>
             {
                 CurrentTitle = string.Empty;
                 CurrentContent = string.Empty;
+                CurrentDto = null;
                 IsRightDrawerOpen = true;
             });
 
-            SaveCommand = new DelegateCommand(() =>
+            SaveCommand = new DelegateCommand(async () =>
             {
                 if (string.IsNullOrWhiteSpace(CurrentTitle))
                     return;
-                var memo = new MemoDto
+                try
                 {
-                    Title = CurrentTitle,
-                    Content = CurrentContent,
-                    Status = 0  // 0 = active/normal memo (MemoDto.Status is inherited from base model)
-                };
-                allMemoDtos.Add(memo);
-                MemoDtos.Add(memo);
-                IsRightDrawerOpen = false;
+                    ApiResponse<MemoDto> result;
+                    if (CurrentDto != null && CurrentDto.Id > 0)
+                    {
+                        CurrentDto.Title = CurrentTitle;
+                        CurrentDto.Content = CurrentContent;
+                        result = await _memoService.UpdateAsync(CurrentDto);
+                    }
+                    else
+                    {
+                        var dto = new MemoDto
+                        {
+                            Title = CurrentTitle,
+                            Content = CurrentContent,
+                            Status = 0
+                        };
+                        result = await _memoService.AddAsync(dto);
+                    }
+
+                    if (result.Status)
+                    {
+                        IsRightDrawerOpen = false;
+                        await LoadMemosAsync();
+                    }
+                }
+                catch { /* network errors are handled in service layer */ }
             });
 
-            DeleteCommand = new DelegateCommand<MemoDto>(memo =>
+            DeleteCommand = new DelegateCommand<MemoDto>(async memo =>
             {
                 if (memo != null)
                 {
-                    allMemoDtos.Remove(memo);
-                    MemoDtos.Remove(memo);
+                    try
+                    {
+                        var result = await _memoService.DeleteAsync(memo.Id);
+                        if (result.Status)
+                            MemoDtos.Remove(memo);
+                    }
+                    catch { /* network errors are handled in service layer */ }
                 }
             });
 
-            SearchCommand = new DelegateCommand(() =>
-            {
-                if (string.IsNullOrWhiteSpace(Search))
-                {
-                    MemoDtos = new ObservableCollection<MemoDto>(allMemoDtos);
-                }
-                else
-                {
-                    var keyword = Search.Trim().ToLower();
-                    var filtered = new ObservableCollection<MemoDto>();
-                    foreach (var item in allMemoDtos)
-                    {
-                        if ((item.Title != null && item.Title.ToLower().Contains(keyword)) ||
-                            (item.Content != null && item.Content.ToLower().Contains(keyword)))
-                        {
-                            filtered.Add(item);
-                        }
-                    }
-                    MemoDtos = filtered;
-                }
-            });
+            SearchCommand = new DelegateCommand(async () => await LoadMemosAsync());
+
+            _ = LoadMemosAsync();
         }
 
-        void CreateMemoDtos()
+        private async Task LoadMemosAsync()
         {
-            allMemoDtos = new ObservableCollection<MemoDto>
-            {
-                new MemoDto { Title = "购物清单", Content = "牛奶、面包、鸡蛋", Status = 0 },
-                new MemoDto { Title = "会议记录", Content = "讨论项目进度和下阶段目标", Status = 0 },
-                new MemoDto { Title = "读书笔记", Content = "《深入理解计算机系统》第三章要点", Status = 0 },
-                new MemoDto { Title = "健身计划", Content = "每周三次有氧，两次力量训练", Status = 0 },
-            };
-            MemoDtos = new ObservableCollection<MemoDto>(allMemoDtos);
+            var result = await _memoService.GetAllAsync(Search);
+            if (result.Status && result.Result != null)
+                MemoDtos = new ObservableCollection<MemoDto>(result.Result);
         }
     }
 }
