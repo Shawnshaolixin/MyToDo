@@ -11,19 +11,26 @@
     <md:DialogHost>
         <md:DrawerHost IsRightDrawerOpen="{Binding IsRightDrawerOpen}">
             <md:DrawerHost.RightDrawerContent>
-                <DockPanel Width="300" LastChildFill="False">
-                    <TextBlock Text="添加待办" FontSize="20" FontWeight="Bold" />
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
-                        <TextBlock Text="状态："/>
-                        <ComboBox>
+                <DockPanel Width="300" LastChildFill="False" Margin="10">
+                    <TextBlock Text="添加待办" FontSize="20" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,5">
+                        <TextBlock Text="状态：" VerticalAlignment="Center"/>
+                        <ComboBox SelectedIndex="{Binding CurrentStatus}">
                             <ComboBoxItem>待办</ComboBoxItem>
                             <ComboBoxItem>已完成</ComboBoxItem>
                         </ComboBox>
                     </StackPanel>
-                    <TextBlock md:HintAssist.Hint="请输入待办概要"/>
-                    <TextBlock md:HintAssist.Hint="请输入待办内容"/>
-
-                    <Button Content="添加"/>
+                    <TextBox md:HintAssist.Hint="请输入待办概要"
+                             Text="{Binding CurrentTitle, UpdateSourceTrigger=PropertyChanged}"
+                             DockPanel.Dock="Top" Margin="0,5"/>
+                    <TextBox md:HintAssist.Hint="请输入待办内容"
+                             Text="{Binding CurrentContent, UpdateSourceTrigger=PropertyChanged}"
+                             DockPanel.Dock="Top" Margin="0,5"
+                             AcceptsReturn="True" MinLines="3" TextWrapping="Wrap"/>
+                    <Button Content="添加" Command="{Binding SaveCommand}"
+                            DockPanel.Dock="Top" Margin="0,10"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource MaterialDesignRaisedButton}"/>
                 </DockPanel>
             </md:DrawerHost.RightDrawerContent>
             <Grid>
@@ -34,11 +41,12 @@
 
                 <StackPanel Margin="15,0,0,0" Orientation="Horizontal">
                     <TextBox Width="250" md:HintAssist.Hint="查找待办事项..."
-              md:TextFieldAssist.HasClearButton="True"
-              />
+                             md:TextFieldAssist.HasClearButton="True"
+                             Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"/>
+                    <Button Content="搜索" Command="{Binding SearchCommand}"
+                            Margin="5,0" Style="{StaticResource MaterialDesignFlatButton}"/>
                     <TextBlock Text="筛选:" Margin="10,0" VerticalAlignment="Center"/>
-
-                    <ComboBox SelectedIndex="0">
+                    <ComboBox SelectedIndex="{Binding FilterIndex}">
                         <ComboBoxItem Content="全部"/>
                         <ComboBoxItem Content="待办"/>
                         <ComboBoxItem Content="已完成"/>
@@ -57,18 +65,19 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Grid  
-                 MinWidth="220" 
-                 MinHeight="180" 
-                 MaxHeight="250"
-                 Margin="8"
-                 >
+                                MinWidth="220" 
+                                MinHeight="180" 
+                                MaxHeight="250"
+                                Margin="8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
                                 <md:PopupBox HorizontalAlignment="Right" Panel.ZIndex="1">
-                                    <Button Content="删除"/>
+                                    <Button Content="删除"
+                                            Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"/>
                                 </md:PopupBox>
 
                                 <Border CornerRadius="4" Grid.RowSpan="2" Background="Green"/>
