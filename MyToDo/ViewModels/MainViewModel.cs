@@ -58,6 +58,8 @@ namespace MyToDo.ViewModels
             MenuBars.Add(new MenuBar() { Icon = "Home", Title = "首页", NameSpace = "IndexView" });
             MenuBars.Add(new MenuBar() { Icon = "NotebookOutline", Title = "代办事项", NameSpace = "ToDoView" });
             MenuBars.Add(new MenuBar() { Icon = "NotebookPlus", Title = "备忘录", NameSpace = "MemoView" });
+            MenuBars.Add(new MenuBar() { Icon = "Account", Title = "用户管理", NameSpace = "UserView" });
+            MenuBars.Add(new MenuBar() { Icon = "ShieldAccount", Title = "角色权限", NameSpace = "RoleView" });
             MenuBars.Add(new MenuBar() { Icon = "Cog", Title = "设置", NameSpace = "SettingsView" });
         }
     }

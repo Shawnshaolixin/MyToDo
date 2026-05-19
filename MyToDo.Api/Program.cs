@@ -22,6 +22,8 @@ builder.Services.AddScoped<IBaseRepository<Memo>, BaseRepository<Memo>>();
 // Register services
 builder.Services.AddScoped<IToDoService, ToDoService>();
 builder.Services.AddScoped<IMemoService, MemoService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 
 var app = builder.Build();
 

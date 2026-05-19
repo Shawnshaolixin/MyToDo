@@ -1,0 +1,188 @@
+<UserControl x:Class="MyToDo.Views.RoleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:MyToDo.Views"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <md:DialogHost>
+        <!-- Role edit drawer -->
+        <md:DrawerHost IsRightDrawerOpen="{Binding IsRoleDrawerOpen}">
+            <md:DrawerHost.RightDrawerContent>
+                <DockPanel Width="300" LastChildFill="False" Margin="15">
+                    <TextBlock DockPanel.Dock="Top" Text="角色信息" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
+                    <TextBox DockPanel.Dock="Top" Margin="0,6"
+                             md:HintAssist.Hint="角色名称 *"
+                             Text="{Binding CurrentRoleName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox DockPanel.Dock="Top" Margin="0,6"
+                             md:HintAssist.Hint="描述"
+                             Text="{Binding CurrentRoleDescription, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True" MinLines="2" TextWrapping="Wrap"/>
+                    <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Content="保存" Command="{Binding SaveRoleCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"/>
+                </DockPanel>
+            </md:DrawerHost.RightDrawerContent>
+
+            <!-- Permission edit drawer -->
+            <md:DrawerHost IsRightDrawerOpen="{Binding IsPermissionDrawerOpen}">
+                <md:DrawerHost.RightDrawerContent>
+                    <DockPanel Width="300" LastChildFill="False" Margin="15">
+                        <TextBlock DockPanel.Dock="Top" Text="权限信息" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
+                        <TextBox DockPanel.Dock="Top" Margin="0,6"
+                                 md:HintAssist.Hint="权限代码 *（如：todo.read）"
+                                 Text="{Binding CurrentPermCode, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox DockPanel.Dock="Top" Margin="0,6"
+                                 md:HintAssist.Hint="权限名称 *"
+                                 Text="{Binding CurrentPermName, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox DockPanel.Dock="Top" Margin="0,6"
+                                 md:HintAssist.Hint="描述"
+                                 Text="{Binding CurrentPermDescription, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True" MinLines="2" TextWrapping="Wrap"/>
+                        <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,12,0,0"
+                                Content="保存" Command="{Binding SavePermissionCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    </DockPanel>
+                </md:DrawerHost.RightDrawerContent>
+
+                <!-- Assign permissions drawer -->
+                <md:DrawerHost IsRightDrawerOpen="{Binding IsAssignPermOpen}">
+                    <md:DrawerHost.RightDrawerContent>
+                        <DockPanel Width="280" LastChildFill="False" Margin="15">
+                            <TextBlock DockPanel.Dock="Top" Text="分配权限" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
+                            <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Opacity="0.7"
+                                       Text="{Binding AssignTargetRole.Name, StringFormat='角色：{0}'}"/>
+                            <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Permissions}" MaxHeight="400">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4">
+                                            <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,8,0"/>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
+                                                <TextBlock Text="{Binding Code}" FontSize="11" Opacity="0.5"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,12,0,0"
+                                    Content="保存" Command="{Binding SaveAssignPermissionsCommand}"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                        </DockPanel>
+                    </md:DrawerHost.RightDrawerContent>
+
+                    <Grid Margin="15">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Roles section header -->
+                        <DockPanel LastChildFill="False">
+                            <TextBlock Text="角色管理" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <TextBox Width="160" md:HintAssist.Hint="搜索角色..."
+                                         md:TextFieldAssist.HasClearButton="True"
+                                         Text="{Binding RoleSearch, UpdateSourceTrigger=PropertyChanged}"/>
+                                <Button Content="搜索" Command="{Binding SearchRoleCommand}"
+                                        Margin="4,0" Style="{StaticResource MaterialDesignFlatButton}"/>
+                                <Button Content="+ 新增角色" Command="{Binding AddRoleCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}" Margin="4,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Permissions section header -->
+                        <DockPanel Grid.Column="2" LastChildFill="False">
+                            <TextBlock Text="权限管理" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Content="+ 新增权限" Command="{Binding AddPermissionCommand}"
+                                    Style="{StaticResource MaterialDesignRaisedButton}" Margin="4,0"/>
+                        </DockPanel>
+
+                        <!-- Roles DataGrid -->
+                        <DataGrid Grid.Row="1" Grid.Column="0" Margin="0,10,0,0"
+                                  ItemsSource="{Binding Roles}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  md:DataGridAssist.CellPadding="8 4"
+                                  md:DataGridAssist.ColumnHeaderPadding="8 4">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="角色名称" Binding="{Binding Name}" Width="130"/>
+                                <DataGridTextColumn Header="描述" Binding="{Binding Description}" Width="*"/>
+                                <DataGridTemplateColumn Header="操作" Width="190">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Content="编辑" Margin="0,0,3,0"
+                                                        Command="{Binding DataContext.EditRoleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"/>
+                                                <Button Content="编辑权限" Margin="0,0,3,0"
+                                                        Command="{Binding DataContext.AssignPermissionsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"/>
+                                                <Button Content="删除"
+                                                        Command="{Binding DataContext.DeleteRoleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                                        Foreground="Red"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Separator -->
+                        <Separator Grid.Row="1" Grid.Column="1" Style="{StaticResource MaterialDesignDarkSeparator}"
+                                   LayoutTransform="{x:Null}">
+                            <Separator.LayoutTransform>
+                                <RotateTransform Angle="90"/>
+                            </Separator.LayoutTransform>
+                        </Separator>
+
+                        <!-- Permissions DataGrid -->
+                        <DataGrid Grid.Row="1" Grid.Column="2" Margin="0,10,0,0"
+                                  ItemsSource="{Binding Permissions}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  md:DataGridAssist.CellPadding="8 4"
+                                  md:DataGridAssist.ColumnHeaderPadding="8 4">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="权限代码" Binding="{Binding Code}" Width="150"/>
+                                <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="130"/>
+                                <DataGridTextColumn Header="描述" Binding="{Binding Description}" Width="*"/>
+                                <DataGridTemplateColumn Header="操作" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Content="编辑" Margin="0,0,3,0"
+                                                        Command="{Binding DataContext.EditPermissionCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"/>
+                                                <Button Content="删除"
+                                                        Command="{Binding DataContext.DeletePermissionCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                                        Foreground="Red"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </md:DrawerHost>
+            </md:DrawerHost>
+        </md:DrawerHost>
+    </md:DialogHost>
+</UserControl>

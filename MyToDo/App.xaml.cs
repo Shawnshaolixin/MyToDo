@@ -26,12 +26,16 @@ namespace MyToDo
             // Register services
             containerRegistry.Register<IToDoService, ToDoHttpService>();
             containerRegistry.Register<IMemoService, MemoHttpService>();
+            containerRegistry.Register<IUserService, UserHttpService>();
+            containerRegistry.Register<IRoleService, RoleHttpService>();
 
             // Register navigation views with ViewModels
             containerRegistry.RegisterForNavigation<IndexView, IndexViewModel>();
             containerRegistry.RegisterForNavigation<ToDoView, ToDoViewModel>();
             containerRegistry.RegisterForNavigation<MemoView, MemoViewModel>();
             containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
+            containerRegistry.RegisterForNavigation<UserView, UserViewModel>();
+            containerRegistry.RegisterForNavigation<RoleView, RoleViewModel>();
         }
     }
 }

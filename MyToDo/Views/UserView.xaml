@@ -1,0 +1,126 @@
+<UserControl x:Class="MyToDo.Views.UserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:MyToDo.Views"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <md:DialogHost>
+        <md:DrawerHost IsRightDrawerOpen="{Binding IsRightDrawerOpen}">
+            <md:DrawerHost.RightDrawerContent>
+                <DockPanel Width="320" LastChildFill="False" Margin="15">
+                    <TextBlock DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"
+                               Text="新增/编辑用户"/>
+                    <TextBox DockPanel.Dock="Top" Margin="0,6"
+                             md:HintAssist.Hint="用户名 *"
+                             Text="{Binding CurrentUserName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox DockPanel.Dock="Top" Margin="0,6"
+                             md:HintAssist.Hint="密码（新增必填，编辑可留空）"
+                             Text="{Binding CurrentPassword, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox DockPanel.Dock="Top" Margin="0,6"
+                             md:HintAssist.Hint="邮箱"
+                             Text="{Binding CurrentEmail, UpdateSourceTrigger=PropertyChanged}"/>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,6">
+                        <TextBlock Text="状态：" VerticalAlignment="Center"/>
+                        <ComboBox SelectedIndex="{Binding CurrentStatus}">
+                            <ComboBoxItem>禁用</ComboBoxItem>
+                            <ComboBoxItem>启用</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Content="保存" Command="{Binding SaveCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"/>
+                </DockPanel>
+            </md:DrawerHost.RightDrawerContent>
+
+            <md:DrawerHost IsRightDrawerOpen="{Binding IsAssignRolesOpen}">
+                <md:DrawerHost.RightDrawerContent>
+                    <DockPanel Width="280" LastChildFill="False" Margin="15">
+                        <TextBlock DockPanel.Dock="Top" Text="分配角色" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
+                        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Opacity="0.7"
+                                   Text="{Binding AssignTargetUser.UserName, StringFormat='用户：{0}'}"/>
+                        <ListBox DockPanel.Dock="Top" ItemsSource="{Binding AllRoles}" MaxHeight="380">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                                        <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,8,0"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.6"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Button DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,12,0,0"
+                                Content="保存" Command="{Binding SaveAssignRolesCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    </DockPanel>
+                </md:DrawerHost.RightDrawerContent>
+
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <DockPanel LastChildFill="False">
+                        <TextBlock Text="用户管理" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Width="220" md:HintAssist.Hint="搜索用户名/邮箱..."
+                                     md:TextFieldAssist.HasClearButton="True"
+                                     Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Content="搜索" Command="{Binding SearchCommand}"
+                                    Margin="5,0" Style="{StaticResource MaterialDesignFlatButton}"/>
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right" Content="+ 新增用户" Command="{Binding AddCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}" Margin="10,0,0,0"/>
+                    </DockPanel>
+
+                    <!-- User list -->
+                    <DataGrid Grid.Row="1" Margin="0,10,0,0"
+                              ItemsSource="{Binding UserDtos}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              md:DataGridAssist.CellPadding="10 5"
+                              md:DataGridAssist.ColumnHeaderPadding="10 5">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="用户名" Binding="{Binding UserName}" Width="150"/>
+                            <DataGridTextColumn Header="邮箱" Binding="{Binding Email}" Width="200"/>
+                            <DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="80"/>
+                            <DataGridTextColumn Header="所属角色" Binding="{Binding RoleNamesText}" Width="*"/>
+                            <DataGridTextColumn Header="创建时间" Binding="{Binding CreateDate, StringFormat={}{0:yyyy-MM-dd}}" Width="120"/>
+                            <DataGridTemplateColumn Header="操作" Width="200">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="编辑" Margin="0,0,5,0"
+                                                    Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"/>
+                                            <Button Content="分配角色" Margin="0,0,5,0"
+                                                    Command="{Binding DataContext.AssignRolesCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"/>
+                                            <Button Content="删除"
+                                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Foreground="Red"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </md:DrawerHost>
+        </md:DrawerHost>
+    </md:DialogHost>
+</UserControl>
