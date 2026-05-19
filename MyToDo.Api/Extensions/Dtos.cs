@@ -1,5 +1,51 @@
 namespace MyToDo.Api.Extensions
 {
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public int Status { get; set; } = 1;
+        public DateTime CreateDate { get; set; }
+        public DateTime UpdateDate { get; set; }
+        public List<int> RoleIds { get; set; } = new();
+        public List<string> RoleNames { get; set; } = new();
+    }
+
+    public class RoleDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime CreateDate { get; set; }
+        public DateTime UpdateDate { get; set; }
+        public List<int> PermissionIds { get; set; } = new();
+        public List<string> PermissionNames { get; set; } = new();
+    }
+
+    public class PermissionDto
+    {
+        public int Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime CreateDate { get; set; }
+        public DateTime UpdateDate { get; set; }
+    }
+
+    public class AssignRolesDto
+    {
+        public int UserId { get; set; }
+        public List<int> RoleIds { get; set; } = new();
+    }
+
+    public class AssignPermissionsDto
+    {
+        public int RoleId { get; set; }
+        public List<int> PermissionIds { get; set; } = new();
+    }
+
     public class ToDoDto
     {
         public int Id { get; set; }
