@@ -1,7 +1,5 @@
 ﻿using MyToDo.Common.Models;
 using MyToDo.Extensions;
-using MyToDo.Service;
-using MyToDo.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
