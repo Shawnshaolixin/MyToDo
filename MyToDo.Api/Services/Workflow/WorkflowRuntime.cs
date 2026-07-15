@@ -95,21 +95,12 @@ namespace MyToDo.Api.Services.Workflow
         /// </summary>
         public async Task<bool> ResumeAsync(string bookmarkType, string bookmarkKey, object? input, CancellationToken cancellationToken)
         {
-            var sanitizedBookmarkType = WorkflowLogSanitizer.Sanitize(bookmarkType);
-            var sanitizedBookmarkKey = WorkflowLogSanitizer.Sanitize(bookmarkKey);
-
-            _logger.LogInformation(
-                "Attempting to resume workflow by bookmark. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
-                sanitizedBookmarkType,
-                sanitizedBookmarkKey);
+            _logger.LogInformation("Attempting to resume workflow by bookmark.");
 
             var bookmark = await _bookmarkService.FindAsync(bookmarkType, bookmarkKey, cancellationToken);
             if (bookmark == null)
             {
-                _logger.LogWarning(
-                    "Workflow bookmark not found. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
-                    sanitizedBookmarkType,
-                    sanitizedBookmarkKey);
+                _logger.LogWarning("Workflow bookmark not found.");
 
                 return false;
             }
@@ -120,11 +111,9 @@ namespace MyToDo.Api.Services.Workflow
                 if (task == null || task.Status != SchedulableTaskStatus.Scheduled)
                 {
                     _logger.LogWarning(
-                        "Schedulable task is not ready for workflow resume. WorkflowInstanceId={WorkflowInstanceId}, ExecutionTokenId={ExecutionTokenId}, BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}, TaskStatus={TaskStatus}",
+                        "Schedulable task is not ready for workflow resume. WorkflowInstanceId={WorkflowInstanceId}, ExecutionTokenId={ExecutionTokenId}, TaskStatus={TaskStatus}",
                         bookmark.WorkflowInstanceId,
                         bookmark.ExecutionTokenId,
-                        sanitizedBookmarkType,
-                        sanitizedBookmarkKey,
                         task?.Status);
 
                     return false;
@@ -150,12 +139,10 @@ namespace MyToDo.Api.Services.Workflow
             await AdvanceUntilPauseOrCompleteAsync(instance.Id, token.Id, cancellationToken);
 
             _logger.LogInformation(
-                "Workflow resumed successfully. WorkflowInstanceId={WorkflowInstanceId}, ExecutionTokenId={ExecutionTokenId}, WorkflowNodeId={WorkflowNodeId}, BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}, WorkflowStatus={WorkflowStatus}",
+                "Workflow resumed successfully. WorkflowInstanceId={WorkflowInstanceId}, ExecutionTokenId={ExecutionTokenId}, WorkflowNodeId={WorkflowNodeId}, WorkflowStatus={WorkflowStatus}",
                 instance.Id,
                 token.Id,
                 nodeInstance.WorkflowNodeId,
-                sanitizedBookmarkType,
-                sanitizedBookmarkKey,
                 instance.Status);
 
             return true;
