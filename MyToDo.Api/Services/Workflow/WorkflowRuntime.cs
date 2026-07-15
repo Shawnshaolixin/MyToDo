@@ -185,8 +185,15 @@ namespace MyToDo.Api.Services.Workflow
 
         private async Task AdvanceUntilPauseOrCompleteAsync(Guid workflowInstanceId, Guid executionTokenId, CancellationToken cancellationToken)
         {
+            var iteration = 0;
             while (true)
             {
+                iteration++;
+                if (iteration > 1000)
+                {
+                    throw new InvalidOperationException("Workflow execution exceeded max iteration guard.");
+                }
+
                 var token = await _context.WorkflowExecutionTokens.FirstAsync(x => x.Id == executionTokenId, cancellationToken);
                 if (token.Status != WorkflowExecutionTokenStatus.Ready)
                 {

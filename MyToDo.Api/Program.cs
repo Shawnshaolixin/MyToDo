@@ -54,6 +54,7 @@ app.MapControllers();
 // Auto-create database schema on startup for SQLite runtime.
 if (app.Environment.IsDevelopment())
 {
+    // For local/dev bootstrap only. Production should use EF migrations.
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<MyToDoContext>();
     db.Database.EnsureCreated();
