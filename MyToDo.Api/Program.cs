@@ -40,13 +40,16 @@ builder.Services.AddScoped<IApsScheduler, ApsScheduler>();
 builder.Services.AddScoped<IWorkflowBookmarkService, WorkflowBookmarkService>();
 
 // ── Node executor registry (singleton — executors are stateless) ──────────────
+// The singleton registry holds only the built-in, stateless executors (Start, End).
+// WorkstationTaskExecutor has a scoped dependency (IWorkstationGateway) and is
+// therefore registered separately as a scoped service; WorkflowRuntime resolves it
+// directly via DI injection rather than via the registry.
 builder.Services.AddSingleton<IWorkflowNodeExecutorRegistry>(sp =>
 {
     var registry = new WorkflowNodeExecutorRegistry();
-    // Register built-in executors
+    // Register built-in stateless executors
     registry.Register(new StartNodeExecutor());
     registry.Register(new EndNodeExecutor());
-    // WorkstationTaskExecutor needs IWorkstationGateway (resolved per-request via factory)
     return registry;
 });
 

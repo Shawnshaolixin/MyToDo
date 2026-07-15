@@ -23,11 +23,16 @@ namespace MyToDo.Api.Services.Workstation
     {
         private readonly MyToDoContext _context;
         private readonly IWorkflowRuntime _workflowRuntime;
+        private readonly ILogger<WorkstationEventAppService> _logger;
 
-        public WorkstationEventAppService(MyToDoContext context, IWorkflowRuntime workflowRuntime)
+        public WorkstationEventAppService(
+            MyToDoContext context,
+            IWorkflowRuntime workflowRuntime,
+            ILogger<WorkstationEventAppService> logger)
         {
             _context = context;
             _workflowRuntime = workflowRuntime;
+            _logger = logger;
         }
 
         /// <summary>Handles a single event received from a device.</summary>
@@ -134,7 +139,10 @@ namespace MyToDo.Api.Services.Workstation
                         promptCode = pc.GetString() ?? promptCode;
                     }
                 }
-                catch { /* ignore parse errors */ }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse prompt PayloadJson; using default promptCode '{Code}'.", promptCode);
+                }
             }
 
             var prompt = new WorkstationPrompt
