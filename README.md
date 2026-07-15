@@ -15,7 +15,7 @@
 ### 本地运行
 
 ```bash
-cd /home/runner/work/MyToDo/MyToDo/MyToDo.Api
+cd MyToDo.Api
 dotnet run
 ```
 
@@ -40,6 +40,5 @@ dotnet run
 ### 测试
 
 ```bash
-cd /home/runner/work/MyToDo/MyToDo
-dotnet test /home/runner/work/MyToDo/MyToDo/MyToDo.Api.Tests/MyToDo.Api.Tests.csproj
+dotnet test MyToDo.Api.Tests/MyToDo.Api.Tests.csproj
 ```

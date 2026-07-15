@@ -73,9 +73,9 @@ namespace MyToDo.Api.Services.Workflow
             if (bookmarkType == WorkflowBookmarkTypes.ScheduleTaskScheduled && Guid.TryParse(bookmark.BookmarkKey, out var taskId))
             {
                 var task = await _context.SchedulableTasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
-                if (task != null && task.Status == SchedulableTaskStatus.ReadyForScheduling)
+                if (task == null || task.Status != SchedulableTaskStatus.Scheduled)
                 {
-                    task.Status = SchedulableTaskStatus.Scheduled;
+                    return false;
                 }
             }
 
