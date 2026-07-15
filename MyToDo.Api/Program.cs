@@ -3,6 +3,7 @@ using MyToDo.Api.Context;
 using MyToDo.Api.Entities;
 using MyToDo.Api.Repositories;
 using MyToDo.Api.Services;
+using MyToDo.Api.Services.Workflow;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,8 @@ builder.Services.AddScoped<IToDoService, ToDoService>();
 builder.Services.AddScoped<IMemoService, MemoService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IWorkflowRuntime, WorkflowRuntime>();
+builder.Services.AddScoped<IApsScheduler, ApsScheduler>();
 
 var app = builder.Build();
 
@@ -37,7 +40,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Auto-migrate database on startup
+// Auto-create database schema on startup for SQLite runtime.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MyToDoContext>();
