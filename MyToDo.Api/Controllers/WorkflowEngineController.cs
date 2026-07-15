@@ -14,15 +14,18 @@ namespace MyToDo.Api.Controllers
         private readonly MyToDoContext _context;
         private readonly IWorkflowRuntime _workflowRuntime;
         private readonly IApsScheduler _apsScheduler;
+        private readonly IWorkstationGateway _workstationGateway;
 
         public WorkflowEngineController(
             MyToDoContext context,
             IWorkflowRuntime workflowRuntime,
-            IApsScheduler apsScheduler)
+            IApsScheduler apsScheduler,
+            IWorkstationGateway workstationGateway)
         {
             _context = context;
             _workflowRuntime = workflowRuntime;
             _apsScheduler = apsScheduler;
+            _workstationGateway = workstationGateway;
         }
 
         [HttpPost("bootstrap")]
@@ -119,7 +122,11 @@ namespace MyToDo.Api.Controllers
                 {
                     WorkflowId = workflow.Id,
                     WorkflowVersionId = version.Id,
-                    WorkOrderId = workOrder.Id
+                    WorkOrderId = workOrder.Id,
+                    StartNodeId = startNode.Id,
+                    ScheduleNodeId = scheduleNode.Id,
+                    WorkstationNodeId = workstationNode.Id,
+                    EndNodeId = endNode.Id
                 });
             }
             catch (Exception ex)
@@ -169,6 +176,25 @@ namespace MyToDo.Api.Controllers
             return new ApiResponse<bool>(resumed, resumed ? "恢复成功" : "未找到可恢复的书签", resumed);
         }
 
+        [HttpPost("workstation/complete")]
+        public async Task<ApiResponse<bool>> CompleteWorkstationTaskAsync([FromBody] CompleteWorkstationTaskRequest request, CancellationToken cancellationToken)
+        {
+            var bookmarkKey = $"{request.WorkflowInstanceId}:{request.WorkflowNodeId}";
+            var triggerResult = await _workstationGateway.TriggerEventAsync(request.DeviceJobId, request.EventCode, cancellationToken);
+            if (!triggerResult)
+            {
+                return new ApiResponse<bool>(false, "设备事件触发失败", false);
+            }
+
+            var resumed = await _workflowRuntime.ResumeAsync(
+                WorkflowBookmarkTypes.WorkstationTaskCompleted,
+                bookmarkKey,
+                new { request.DeviceJobId, request.EventCode },
+                cancellationToken);
+
+            return new ApiResponse<bool>(resumed, resumed ? "工位任务已恢复" : "未找到可恢复的工位任务书签", resumed);
+        }
+
         [HttpGet("instances/{instanceId:guid}")]
         public async Task<ApiResponse<object>> GetInstanceStatusAsync(Guid instanceId, CancellationToken cancellationToken)
         {
@@ -211,6 +237,14 @@ namespace MyToDo.Api.Controllers
                 Bookmarks = bookmarks,
                 Tasks = tasks
             });
+        }
+
+        public class CompleteWorkstationTaskRequest
+        {
+            public Guid WorkflowInstanceId { get; set; }
+            public Guid WorkflowNodeId { get; set; }
+            public Guid DeviceJobId { get; set; }
+            public string EventCode { get; set; } = "ExperimentCompleted";
         }
     }
 }

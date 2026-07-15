@@ -17,8 +17,17 @@ namespace MyToDo.Api.Tests
             await using var context = new MyToDoContext(options);
             await SeedWorkflowAsync(context);
 
-            var runtime = new WorkflowRuntime(context);
-            var scheduler = new ApsScheduler(context);
+            var bookmarkService = new WorkflowBookmarkService(context);
+            var executors = new IWorkflowNodeExecutor[]
+            {
+                new StartNodeExecutor(),
+                new ScheduleTaskNodeExecutor(),
+                new WorkstationTaskExecutor(),
+                new EndNodeExecutor()
+            };
+            var registry = new WorkflowNodeExecutorRegistry(executors);
+            var runtime = new WorkflowRuntime(context, registry, bookmarkService);
+            var scheduler = new SimpleApsScheduler(context);
 
             var workOrder = await context.WorkOrders.SingleAsync();
             var version = await context.WorkflowVersions.SingleAsync();

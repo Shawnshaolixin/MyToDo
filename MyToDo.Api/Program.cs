@@ -13,8 +13,11 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // EF Core with SQLite
+var sqliteConnectionString = builder.Configuration.GetConnectionString("ToDoConnection")
+    ?? throw new InvalidOperationException("Connection string 'ToDoConnection' is not configured.");
+
 builder.Services.AddDbContext<MyToDoContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("ToDoConnection")));
+    options.UseSqlite(sqliteConnectionString));
 
 // Register repositories
 builder.Services.AddScoped<IBaseRepository<ToDo>, BaseRepository<ToDo>>();
@@ -25,8 +28,15 @@ builder.Services.AddScoped<IToDoService, ToDoService>();
 builder.Services.AddScoped<IMemoService, MemoService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IWorkflowBookmarkService, WorkflowBookmarkService>();
+builder.Services.AddScoped<IWorkflowNodeExecutor, StartNodeExecutor>();
+builder.Services.AddScoped<IWorkflowNodeExecutor, ScheduleTaskNodeExecutor>();
+builder.Services.AddScoped<IWorkflowNodeExecutor, WorkstationTaskExecutor>();
+builder.Services.AddScoped<IWorkflowNodeExecutor, EndNodeExecutor>();
+builder.Services.AddScoped<IWorkflowNodeExecutorRegistry, WorkflowNodeExecutorRegistry>();
+builder.Services.AddSingleton<IWorkstationGateway, FakeWorkstationGateway>();
 builder.Services.AddScoped<IWorkflowRuntime, WorkflowRuntime>();
-builder.Services.AddScoped<IApsScheduler, ApsScheduler>();
+builder.Services.AddScoped<IApsScheduler, SimpleApsScheduler>();
 
 var app = builder.Build();
 
@@ -40,9 +50,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Auto-create database schema on startup for SQLite runtime.
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    // EnsureCreated is convenient for local demos because it bootstraps schema automatically.
+    // Tradeoff: it bypasses migration history, so production environments should use EF migrations instead.
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<MyToDoContext>();
     db.Database.EnsureCreated();
 }

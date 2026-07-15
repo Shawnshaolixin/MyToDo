@@ -4,13 +4,38 @@ using MyToDo.Api.Entities.Workflow;
 
 namespace MyToDo.Api.Services.Workflow
 {
+    /// <summary>
+    /// Minimal workflow runtime implementation.
+    ///
+    /// Flow summary:
+    /// - StartAsync creates WorkflowInstance + first token at Start node.
+    /// - ExecuteNodeAsync resolves executor by node type and runs it.
+    /// - Done outcome moves token to next node and continues.
+    /// - Waiting outcome creates bookmark and suspends instance/token.
+    /// - ResumeAsync consumes bookmark, completes waiting node instance, and continues execution.
+    ///
+    /// Error handling:
+    /// - Missing workflow nodes/executors throw InvalidOperationException.
+    /// - Duplicate resume attempts return false once bookmark is already consumed.
+    ///
+    /// Bookmark usage:
+    /// - External systems (APS or workstation callbacks) call ResumeAsync with bookmarkType + bookmarkKey.
+    /// - Bookmark service finds active bookmark, marks it consumed, then runtime advances token.
+    /// </summary>
     public class WorkflowRuntime : IWorkflowRuntime
     {
         private readonly MyToDoContext _context;
+        private readonly IWorkflowNodeExecutorRegistry _executorRegistry;
+        private readonly IWorkflowBookmarkService _bookmarkService;
 
-        public WorkflowRuntime(MyToDoContext context)
+        public WorkflowRuntime(
+            MyToDoContext context,
+            IWorkflowNodeExecutorRegistry executorRegistry,
+            IWorkflowBookmarkService bookmarkService)
         {
             _context = context;
+            _executorRegistry = executorRegistry;
+            _bookmarkService = bookmarkService;
         }
 
         public async Task<WorkflowInstance> StartAsync(Guid workOrderId, Guid workflowVersionId, CancellationToken cancellationToken)
@@ -54,12 +79,7 @@ namespace MyToDo.Api.Services.Workflow
 
         public async Task<bool> ResumeAsync(string bookmarkType, string bookmarkKey, object? input, CancellationToken cancellationToken)
         {
-            var bookmark = await _context.WorkflowBookmarks
-                .FirstOrDefaultAsync(x =>
-                    x.BookmarkType == bookmarkType &&
-                    x.BookmarkKey == bookmarkKey &&
-                    x.Status == WorkflowBookmarkStatus.Active,
-                    cancellationToken);
+            var bookmark = await _bookmarkService.FindAsync(bookmarkType, bookmarkKey, cancellationToken);
 
             if (bookmark == null)
             {
@@ -69,18 +89,12 @@ namespace MyToDo.Api.Services.Workflow
             var token = await _context.WorkflowExecutionTokens.FirstAsync(x => x.Id == bookmark.ExecutionTokenId, cancellationToken);
             var instance = await _context.WorkflowInstances.FirstAsync(x => x.Id == bookmark.WorkflowInstanceId, cancellationToken);
             var nodeInstance = await _context.WorkflowNodeInstances.FirstAsync(x => x.Id == bookmark.WorkflowNodeInstanceId, cancellationToken);
-
-            if (bookmarkType == WorkflowBookmarkTypes.ScheduleTaskScheduled && Guid.TryParse(bookmark.BookmarkKey, out var taskId))
+            var consumed = await _bookmarkService.ConsumeAsync(bookmark.Id, cancellationToken);
+            if (!consumed)
             {
-                var task = await _context.SchedulableTasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
-                if (task == null || task.Status != SchedulableTaskStatus.Scheduled)
-                {
-                    return false;
-                }
+                return false;
             }
 
-            bookmark.Status = WorkflowBookmarkStatus.Consumed;
-            bookmark.ConsumedAt = DateTime.UtcNow;
             nodeInstance.Status = WorkflowNodeInstanceStatus.Completed;
             nodeInstance.CompletedAt = DateTime.UtcNow;
 
@@ -101,6 +115,7 @@ namespace MyToDo.Api.Services.Workflow
 
         public async Task ExecuteNodeAsync(Guid workflowInstanceId, Guid executionTokenId, CancellationToken cancellationToken)
         {
+            // Loop to allow immediate pass-through over consecutive Done nodes (e.g., Start -> End).
             var iteration = 0;
             while (true)
             {
@@ -120,6 +135,7 @@ namespace MyToDo.Api.Services.Workflow
 
                 var node = await _context.WorkflowNodes.FirstOrDefaultAsync(x => x.Id == token.CurrentNodeId, cancellationToken)
                     ?? throw new InvalidOperationException("Workflow node not found.");
+                var workOrder = await _context.WorkOrders.FirstAsync(x => x.Id == instance.WorkOrderId, cancellationToken);
 
                 var nodeInstance = new WorkflowNodeInstance
                 {
@@ -132,51 +148,50 @@ namespace MyToDo.Api.Services.Workflow
                 };
 
                 _context.WorkflowNodeInstances.Add(nodeInstance);
+                await _context.SaveChangesAsync(cancellationToken);
 
-                if (node.NodeType == WorkflowNodeType.End)
+                var executionContext = new WorkflowExecutionContext
                 {
-                    nodeInstance.Status = WorkflowNodeInstanceStatus.Completed;
-                    nodeInstance.CompletedAt = DateTime.UtcNow;
-                    token.Status = WorkflowExecutionTokenStatus.Completed;
-                    token.UpdatedAt = DateTime.UtcNow;
-                    instance.Status = WorkflowInstanceStatus.Completed;
-                    instance.CompletedAt = DateTime.UtcNow;
+                    DbContext = _context,
+                    Instance = instance,
+                    Token = token,
+                    Node = node,
+                    NodeInstance = nodeInstance,
+                    WorkOrder = workOrder,
+                    CancellationToken = cancellationToken
+                };
 
-                    var workOrder = await _context.WorkOrders.FirstAsync(x => x.Id == instance.WorkOrderId, cancellationToken);
-                    workOrder.Status = WorkOrderStatus.Completed;
-                    workOrder.CompletedAt = DateTime.UtcNow;
+                var executor = _executorRegistry.Find(node.NodeType);
+                var result = await executor.ExecuteAsync(executionContext);
 
-                    await _context.SaveChangesAsync(cancellationToken);
-                    return;
-                }
-
-                if (node.NodeType == WorkflowNodeType.Start)
+                if (result.Outcome == NodeExecutionOutcome.Done)
                 {
-                    nodeInstance.Status = WorkflowNodeInstanceStatus.Completed;
-                    nodeInstance.CompletedAt = DateTime.UtcNow;
+                    if (nodeInstance.Status == WorkflowNodeInstanceStatus.Running)
+                    {
+                        nodeInstance.Status = WorkflowNodeInstanceStatus.Completed;
+                        nodeInstance.CompletedAt = DateTime.UtcNow;
+                    }
 
-                    await MoveTokenToNextNodeOrCompleteAsync(instance, token, node.Id, cancellationToken);
+                    if (token.Status != WorkflowExecutionTokenStatus.Completed)
+                    {
+                        await MoveTokenToNextNodeOrCompleteAsync(instance, token, node.Id, cancellationToken);
+                    }
+
                     await _context.SaveChangesAsync(cancellationToken);
                     continue;
                 }
 
-                if (node.NodeType == WorkflowNodeType.ScheduleTask)
+                if (result.Outcome == NodeExecutionOutcome.Waiting)
                 {
-                    var workOrder = await _context.WorkOrders.FirstAsync(x => x.Id == instance.WorkOrderId, cancellationToken);
-                    var schedulableTask = new SchedulableTask
+                    if (string.IsNullOrWhiteSpace(result.BookmarkType) || string.IsNullOrWhiteSpace(result.BookmarkKey))
                     {
-                        Id = Guid.NewGuid(),
-                        WorkOrderId = workOrder.Id,
-                        WorkflowInstanceId = instance.Id,
-                        WorkflowNodeInstanceId = nodeInstance.Id,
-                        RequiredResourceType = node.RequiredResourceType ?? "Workstation",
-                        Priority = workOrder.Priority,
-                        EarliestStartTime = workOrder.EarliestStartTime,
-                        DurationMinutes = node.EstimatedDurationMinutes,
-                        Status = SchedulableTaskStatus.ReadyForScheduling
-                    };
+                        throw new InvalidOperationException("Waiting node executor must return bookmark type and key.");
+                    }
 
-                    _context.SchedulableTasks.Add(schedulableTask);
+                    nodeInstance.Status = WorkflowNodeInstanceStatus.Waiting;
+                    token.Status = WorkflowExecutionTokenStatus.Waiting;
+                    token.UpdatedAt = DateTime.UtcNow;
+                    instance.Status = WorkflowInstanceStatus.Suspended;
 
                     var bookmark = new WorkflowBookmark
                     {
@@ -184,45 +199,24 @@ namespace MyToDo.Api.Services.Workflow
                         WorkflowInstanceId = instance.Id,
                         ExecutionTokenId = token.Id,
                         WorkflowNodeInstanceId = nodeInstance.Id,
-                        BookmarkType = WorkflowBookmarkTypes.ScheduleTaskScheduled,
-                        BookmarkKey = schedulableTask.Id.ToString(),
+                        BookmarkType = result.BookmarkType,
+                        BookmarkKey = result.BookmarkKey,
+                        InputJson = result.InputJson,
                         Status = WorkflowBookmarkStatus.Active,
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    _context.WorkflowBookmarks.Add(bookmark);
-                    nodeInstance.Status = WorkflowNodeInstanceStatus.Waiting;
-                    token.Status = WorkflowExecutionTokenStatus.Waiting;
-                    token.UpdatedAt = DateTime.UtcNow;
-                    instance.Status = WorkflowInstanceStatus.Suspended;
+                    await _bookmarkService.CreateAsync(bookmark, cancellationToken);
                     await _context.SaveChangesAsync(cancellationToken);
                     return;
                 }
 
-                if (node.NodeType == WorkflowNodeType.WorkstationTask)
-                {
-                    var bookmark = new WorkflowBookmark
-                    {
-                        Id = Guid.NewGuid(),
-                        WorkflowInstanceId = instance.Id,
-                        ExecutionTokenId = token.Id,
-                        WorkflowNodeInstanceId = nodeInstance.Id,
-                        BookmarkType = WorkflowBookmarkTypes.WorkstationTaskCompleted,
-                        BookmarkKey = $"{instance.Id}:{node.Id}",
-                        Status = WorkflowBookmarkStatus.Active,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    _context.WorkflowBookmarks.Add(bookmark);
-                    nodeInstance.Status = WorkflowNodeInstanceStatus.Waiting;
-                    token.Status = WorkflowExecutionTokenStatus.Waiting;
-                    token.UpdatedAt = DateTime.UtcNow;
-                    instance.Status = WorkflowInstanceStatus.Suspended;
-                    await _context.SaveChangesAsync(cancellationToken);
-                    return;
-                }
-
-                throw new InvalidOperationException($"Unsupported node type: {node.NodeType}");
+                nodeInstance.Status = WorkflowNodeInstanceStatus.Failed;
+                token.Status = WorkflowExecutionTokenStatus.Failed;
+                instance.Status = WorkflowInstanceStatus.Failed;
+                workOrder.Status = WorkOrderStatus.Failed;
+                await _context.SaveChangesAsync(cancellationToken);
+                throw new InvalidOperationException($"Node execution failed for type: {node.NodeType}");
             }
         }
 

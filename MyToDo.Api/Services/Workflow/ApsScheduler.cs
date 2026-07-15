@@ -4,11 +4,19 @@ using MyToDo.Api.Entities.Workflow;
 
 namespace MyToDo.Api.Services.Workflow
 {
-    public class ApsScheduler : IApsScheduler
+    /// <summary>
+    /// Simplified APS scheduler:
+    /// 1) Load tasks in ReadyForScheduling ordered by priority desc, earliest start asc.
+    /// 2) For each task, pick matching resource type with earliest available time.
+    /// 3) Create ScheduleResult and mark task as Scheduled.
+    /// 
+    /// This is intentionally greedy and local-optimal only, but good enough for a minimal runnable demo.
+    /// </summary>
+    public class SimpleApsScheduler : IApsScheduler
     {
         private readonly MyToDoContext _context;
 
-        public ApsScheduler(MyToDoContext context)
+        public SimpleApsScheduler(MyToDoContext context)
         {
             _context = context;
         }

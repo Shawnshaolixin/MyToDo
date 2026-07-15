@@ -182,6 +182,10 @@ namespace MyToDo.Api.Context
                     .WithMany(i => i.ExecutionTokens)
                     .HasForeignKey(e => e.WorkflowInstanceId)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<WorkflowNode>()
+                    .WithMany()
+                    .HasForeignKey(e => e.CurrentNodeId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<WorkflowNodeInstance>(entity =>
@@ -197,6 +201,10 @@ namespace MyToDo.Api.Context
                     .WithMany()
                     .HasForeignKey(e => e.WorkflowNodeId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<WorkflowExecutionToken>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ExecutionTokenId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<WorkflowBookmark>(entity =>
@@ -206,9 +214,19 @@ namespace MyToDo.Api.Context
                 entity.Property(e => e.BookmarkKey).IsRequired().HasMaxLength(128);
                 entity.Property(e => e.Status).HasConversion<string>().IsRequired();
                 entity.HasIndex(e => new { e.BookmarkType, e.BookmarkKey, e.Status });
+                entity.HasIndex(e => e.ExecutionTokenId);
+                entity.HasIndex(e => e.WorkflowNodeInstanceId);
                 entity.HasOne(e => e.WorkflowInstance)
                     .WithMany(i => i.Bookmarks)
                     .HasForeignKey(e => e.WorkflowInstanceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<WorkflowExecutionToken>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ExecutionTokenId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<WorkflowNodeInstance>()
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowNodeInstanceId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
