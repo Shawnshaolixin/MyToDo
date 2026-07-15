@@ -17,8 +17,8 @@ namespace MyToDo.Api.Tests
             await using var context = new MyToDoContext(options);
             await SeedWorkflowAsync(context);
 
-            var runtime = new WorkflowRuntime(context);
-            var scheduler = new ApsScheduler(context);
+            var runtime = CreateRuntime(context);
+            var scheduler = new SimpleApsScheduler(context);
 
             var workOrder = await context.WorkOrders.SingleAsync();
             var version = await context.WorkflowVersions.SingleAsync();
@@ -137,6 +137,20 @@ namespace MyToDo.Api.Tests
             });
 
             await context.SaveChangesAsync();
+        }
+
+        private static WorkflowRuntime CreateRuntime(MyToDoContext context)
+        {
+            var bookmarkService = new WorkflowBookmarkService(context);
+            var registry = new WorkflowNodeExecutorRegistry(
+            [
+                new StartNodeExecutor(),
+                new EndNodeExecutor(),
+                new ScheduleTaskNodeExecutor(context),
+                new WorkstationTaskExecutor(new FakeWorkstationGateway())
+            ]);
+
+            return new WorkflowRuntime(context, registry, bookmarkService);
         }
     }
 }

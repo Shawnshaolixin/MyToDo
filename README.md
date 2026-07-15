@@ -1,44 +1,73 @@
 # MyToDo
 
-## Workflow + APS 最小可运行验证（SQLite）
-
-本仓库 `MyToDo.Api` 已包含一个最小可运行链路：
-
-1. 创建工单并绑定流程版本
-2. 启动工作流运行时（`StartAsync`）
-3. 流程到达 `ScheduleTask` 并创建 `SchedulableTask` + Bookmark
-4. 运行 APS 调度器（按优先级、最早开始时间、资源类型分配）
-5. 调度完成后恢复流程（`ResumeAsync`）
-6. 流程到达 `WorkstationTask`，恢复后继续推进到 `End`
-7. 流程实例与工单状态标记为 `Completed`
+## Workflow + APS 最小可运行说明（SQLite）
 
 ### 本地运行
 
 ```bash
-cd MyToDo.Api
+cd /home/runner/work/MyToDo/MyToDo/MyToDo.Api
 dotnet run
 ```
 
-默认 SQLite 连接：`MyToDo.Api/appsettings.json`
+默认连接字符串：
 
 ```json
 "ConnectionStrings": {
+  "DefaultConnection": "Data Source=mytodo.db",
   "ToDoConnection": "Data Source=mytodo.db"
 }
 ```
 
-应用启动时会自动执行 `EnsureCreated()` 初始化数据库表结构。
+开发环境启动时会执行 `EnsureCreated()` 自动建表。
 
-### 最小验证 API
+### 示例 SQL（可选）
 
-- `POST /api/WorkflowEngine/bootstrap`：初始化一条示例 WorkflowVersion + WorkOrder + Resource
-- `POST /api/WorkflowEngine/start`：启动流程运行时
-- `POST /api/WorkflowEngine/schedule`：执行 APS 调度并恢复 `ScheduleTask` 书签
-- `POST /api/WorkflowEngine/resume`：手动恢复书签（如 `WorkstationTaskCompleted`）
-- `GET /api/WorkflowEngine/instances/{instanceId}`：查看流程实例、书签、排程任务状态
+```sql
+-- 查看启动后是否已建表
+SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;
+```
+
+### curl 验证（Start -> ScheduleTask -> WorkstationTask -> End）
+
+1) 初始化示例流程/工单/资源：
+
+```bash
+curl -s -X POST "http://localhost:5000/api/WorkflowEngine/bootstrap" \
+  -H "Content-Type: application/json" \
+  -d '{"workflowName":"Demo Workflow","workOrderNo":"WO-DEMO-001","priority":10,"requiredResourceType":"Workstation","estimatedDurationMinutes":30}'
+```
+
+2) 启动流程（会先跑到 `ScheduleTask` 并挂起）：
+
+```bash
+curl -s -X POST "http://localhost:5000/api/WorkflowEngine/start" \
+  -H "Content-Type: application/json" \
+  -d '{"workOrderId":"<WorkOrderId>","workflowVersionId":"<WorkflowVersionId>"}'
+```
+
+3) 执行 APS 调度并自动恢复 `ScheduleTask`：
+
+```bash
+curl -s -X POST "http://localhost:5000/api/WorkflowEngine/schedule"
+```
+
+4) 查询实例，拿到 `WorkstationTaskCompleted` 的 bookmark key（Fake gateway 返回 GUID）：
+
+```bash
+curl -s "http://localhost:5000/api/WorkflowEngine/instances/<WorkflowInstanceId>"
+```
+
+5) 恢复 `WorkstationTask`，流程推进到 `End` 并完成：
+
+```bash
+curl -s -X POST "http://localhost:5000/api/WorkflowEngine/resume" \
+  -H "Content-Type: application/json" \
+  -d '{"bookmarkType":"WorkstationTaskCompleted","bookmarkKey":"<DeviceJobId>"}'
+```
 
 ### 测试
 
 ```bash
+cd /home/runner/work/MyToDo/MyToDo
 dotnet test MyToDo.Api.Tests/MyToDo.Api.Tests.csproj
 ```

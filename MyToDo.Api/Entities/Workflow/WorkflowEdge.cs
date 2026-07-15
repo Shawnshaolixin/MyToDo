@@ -6,6 +6,8 @@ namespace MyToDo.Api.Entities.Workflow
         public Guid WorkflowVersionId { get; set; }
         public Guid FromNodeId { get; set; }
         public Guid ToNodeId { get; set; }
+        public bool IsDefault { get; set; } = true;
+        public string? ConditionExpression { get; set; }
 
         public WorkflowVersion? WorkflowVersion { get; set; }
         public WorkflowNode? FromNode { get; set; }

@@ -130,6 +130,7 @@ namespace MyToDo.Api.Context
             modelBuilder.Entity<WorkflowEdge>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.ConditionExpression).HasMaxLength(256);
                 entity.HasIndex(e => new { e.WorkflowVersionId, e.FromNodeId, e.ToNodeId }).IsUnique();
                 entity.HasOne(e => e.WorkflowVersion)
                     .WithMany(v => v.Edges)
@@ -204,11 +205,20 @@ namespace MyToDo.Api.Context
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.BookmarkType).IsRequired().HasMaxLength(64);
                 entity.Property(e => e.BookmarkKey).IsRequired().HasMaxLength(128);
+                entity.Property(e => e.InputJson).HasMaxLength(2000);
                 entity.Property(e => e.Status).HasConversion<string>().IsRequired();
                 entity.HasIndex(e => new { e.BookmarkType, e.BookmarkKey, e.Status });
                 entity.HasOne(e => e.WorkflowInstance)
                     .WithMany(i => i.Bookmarks)
                     .HasForeignKey(e => e.WorkflowInstanceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<WorkflowExecutionToken>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ExecutionTokenId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<WorkflowNodeInstance>()
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowNodeInstanceId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
