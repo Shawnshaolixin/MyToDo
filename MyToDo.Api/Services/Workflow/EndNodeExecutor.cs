@@ -10,9 +10,6 @@ namespace MyToDo.Api.Services.Workflow
         {
             context.ExecutionToken.Status = WorkflowExecutionTokenStatus.Completed;
             context.ExecutionToken.UpdatedAt = DateTime.UtcNow;
-            context.WorkflowInstance.Status = WorkflowInstanceStatus.Completed;
-            context.WorkflowInstance.CompletedAt = DateTime.UtcNow;
-
             return Task.FromResult(NodeExecutionResult.Done());
         }
     }

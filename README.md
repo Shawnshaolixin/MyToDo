@@ -5,7 +5,7 @@
 ### 本地运行
 
 ```bash
-cd /home/runner/work/MyToDo/MyToDo/MyToDo.Api
+cd MyToDo.Api
 dotnet run
 ```
 
@@ -68,6 +68,5 @@ curl -s -X POST "http://localhost:5000/api/WorkflowEngine/resume" \
 ### 测试
 
 ```bash
-cd /home/runner/work/MyToDo/MyToDo
 dotnet test MyToDo.Api.Tests/MyToDo.Api.Tests.csproj
 ```

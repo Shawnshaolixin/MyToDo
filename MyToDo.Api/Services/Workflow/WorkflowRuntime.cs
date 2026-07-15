@@ -160,7 +160,6 @@ namespace MyToDo.Api.Services.Workflow
                 token.UpdatedAt = DateTime.UtcNow;
                 instance.Status = WorkflowInstanceStatus.Suspended;
 
-                await _context.SaveChangesAsync(cancellationToken);
                 await _bookmarkService.CreateAsync(
                     instance.Id,
                     token.Id,
