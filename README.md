@@ -11,7 +11,7 @@ cd MyToDo.Api
 dotnet run
 ```
 
-默认连接串位于 `/home/runner/work/MyToDo/MyToDo/MyToDo.Api/appsettings.json`：
+默认连接串位于 `MyToDo.Api/appsettings.json`：
 
 ```json
 "ConnectionStrings": {
@@ -80,7 +80,7 @@ curl -s -X POST "<baseUrl>/api/WorkflowEngine/workstation/complete" \
 
 ### 3) Fake 网关说明
 
-- 位置：`/home/runner/work/MyToDo/MyToDo/MyToDo.Api/Services/Workflow/FakeWorkstationGateway.cs`
+- 位置：`MyToDo.Api/Services/Workflow/FakeWorkstationGateway.cs`
 - 作用：提供本地可重复的假数据（`StartExperimentAsync` 会基于输入返回确定性的 GUID `DeviceJobId`），便于调试与测试。
 
 ### 4) 运行测试

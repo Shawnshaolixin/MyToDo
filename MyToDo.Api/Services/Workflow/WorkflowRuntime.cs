@@ -115,6 +115,12 @@ namespace MyToDo.Api.Services.Workflow
 
         public async Task ExecuteNodeAsync(Guid workflowInstanceId, Guid executionTokenId, CancellationToken cancellationToken)
         {
+            var initialInstance = await _context.WorkflowInstances
+                .AsNoTracking()
+                .FirstAsync(x => x.Id == workflowInstanceId, cancellationToken);
+            var workOrder = await _context.WorkOrders
+                .FirstAsync(x => x.Id == initialInstance.WorkOrderId, cancellationToken);
+
             // Loop to allow immediate pass-through over consecutive Done nodes (e.g., Start -> End).
             var iteration = 0;
             while (true)
@@ -135,7 +141,6 @@ namespace MyToDo.Api.Services.Workflow
 
                 var node = await _context.WorkflowNodes.FirstOrDefaultAsync(x => x.Id == token.CurrentNodeId, cancellationToken)
                     ?? throw new InvalidOperationException("Workflow node not found.");
-                var workOrder = await _context.WorkOrders.FirstAsync(x => x.Id == instance.WorkOrderId, cancellationToken);
 
                 var nodeInstance = new WorkflowNodeInstance
                 {

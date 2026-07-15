@@ -17,5 +17,7 @@ namespace MyToDo.Api.Services.Workflow
                 BookmarkKey = bookmarkKey,
                 InputJson = inputJson
             };
+
+        public static NodeExecutionResult Failed() => new() { Outcome = NodeExecutionOutcome.Failed };
     }
 }

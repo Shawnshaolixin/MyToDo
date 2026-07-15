@@ -4,6 +4,7 @@ using MyToDo.Api.Context;
 using MyToDo.Api.Entities.Workflow;
 using MyToDo.Api.Extensions;
 using MyToDo.Api.Services.Workflow;
+using System.ComponentModel.DataAnnotations;
 
 namespace MyToDo.Api.Controllers
 {
@@ -244,7 +245,8 @@ namespace MyToDo.Api.Controllers
             public Guid WorkflowInstanceId { get; set; }
             public Guid WorkflowNodeId { get; set; }
             public Guid DeviceJobId { get; set; }
-            public string EventCode { get; set; } = "ExperimentCompleted";
+            [Required]
+            public string EventCode { get; set; } = string.Empty;
         }
     }
 }

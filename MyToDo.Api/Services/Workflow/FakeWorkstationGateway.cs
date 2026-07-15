@@ -50,8 +50,8 @@ namespace MyToDo.Api.Services.Workflow
         private static Guid CreateDeterministicGuid(string payload)
         {
             var bytes = Encoding.UTF8.GetBytes(payload);
-            var hash = MD5.HashData(bytes);
-            return new Guid(hash);
+            var hash = SHA256.HashData(bytes);
+            return new Guid(hash[..16]);
         }
     }
 }
