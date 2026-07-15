@@ -101,8 +101,15 @@ namespace MyToDo.Api.Services.Workflow
 
         public async Task ExecuteNodeAsync(Guid workflowInstanceId, Guid executionTokenId, CancellationToken cancellationToken)
         {
+            var iteration = 0;
             while (true)
             {
+                iteration++;
+                if (iteration > 1000)
+                {
+                    throw new InvalidOperationException("Workflow execution exceeded max iteration guard.");
+                }
+
                 var instance = await _context.WorkflowInstances.FirstAsync(x => x.Id == workflowInstanceId, cancellationToken);
                 var token = await _context.WorkflowExecutionTokens.FirstAsync(x => x.Id == executionTokenId, cancellationToken);
 

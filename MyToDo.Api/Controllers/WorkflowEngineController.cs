@@ -28,93 +28,104 @@ namespace MyToDo.Api.Controllers
         [HttpPost("bootstrap")]
         public async Task<ApiResponse<object>> BootstrapAsync([FromBody] BootstrapWorkflowRequest request, CancellationToken cancellationToken)
         {
-            var workflow = new Workflow
+            try
             {
-                Id = Guid.NewGuid(),
-                Name = request.WorkflowName,
-                CreatedAt = DateTime.UtcNow
-            };
+                var workOrderNo = string.IsNullOrWhiteSpace(request.WorkOrderNo)
+                    ? $"WO-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..28]
+                    : request.WorkOrderNo;
 
-            var version = new WorkflowVersion
-            {
-                Id = Guid.NewGuid(),
-                WorkflowId = workflow.Id,
-                VersionNumber = 1,
-                IsPublished = true,
-                CreatedAt = DateTime.UtcNow
-            };
+                var workflow = new Workflow
+                {
+                    Id = Guid.NewGuid(),
+                    Name = request.WorkflowName,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-            var startNode = new WorkflowNode
-            {
-                Id = Guid.NewGuid(),
-                WorkflowVersionId = version.Id,
-                NodeKey = "start",
-                NodeType = WorkflowNodeType.Start
-            };
-            var scheduleNode = new WorkflowNode
-            {
-                Id = Guid.NewGuid(),
-                WorkflowVersionId = version.Id,
-                NodeKey = "schedule",
-                NodeType = WorkflowNodeType.ScheduleTask,
-                RequiredResourceType = request.RequiredResourceType,
-                EstimatedDurationMinutes = request.EstimatedDurationMinutes
-            };
-            var workstationNode = new WorkflowNode
-            {
-                Id = Guid.NewGuid(),
-                WorkflowVersionId = version.Id,
-                NodeKey = "workstation",
-                NodeType = WorkflowNodeType.WorkstationTask,
-                RequiredResourceType = request.RequiredResourceType
-            };
-            var endNode = new WorkflowNode
-            {
-                Id = Guid.NewGuid(),
-                WorkflowVersionId = version.Id,
-                NodeKey = "end",
-                NodeType = WorkflowNodeType.End
-            };
+                var version = new WorkflowVersion
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflow.Id,
+                    VersionNumber = 1,
+                    IsPublished = true,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-            var edges = new[]
-            {
-                new WorkflowEdge { Id = Guid.NewGuid(), WorkflowVersionId = version.Id, FromNodeId = startNode.Id, ToNodeId = scheduleNode.Id },
-                new WorkflowEdge { Id = Guid.NewGuid(), WorkflowVersionId = version.Id, FromNodeId = scheduleNode.Id, ToNodeId = workstationNode.Id },
-                new WorkflowEdge { Id = Guid.NewGuid(), WorkflowVersionId = version.Id, FromNodeId = workstationNode.Id, ToNodeId = endNode.Id }
-            };
+                var startNode = new WorkflowNode
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowVersionId = version.Id,
+                    NodeKey = "start",
+                    NodeType = WorkflowNodeType.Start
+                };
+                var scheduleNode = new WorkflowNode
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowVersionId = version.Id,
+                    NodeKey = "schedule",
+                    NodeType = WorkflowNodeType.ScheduleTask,
+                    RequiredResourceType = request.RequiredResourceType,
+                    EstimatedDurationMinutes = request.EstimatedDurationMinutes
+                };
+                var workstationNode = new WorkflowNode
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowVersionId = version.Id,
+                    NodeKey = "workstation",
+                    NodeType = WorkflowNodeType.WorkstationTask,
+                    RequiredResourceType = request.RequiredResourceType
+                };
+                var endNode = new WorkflowNode
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowVersionId = version.Id,
+                    NodeKey = "end",
+                    NodeType = WorkflowNodeType.End
+                };
 
-            var workOrder = new WorkOrder
-            {
-                Id = Guid.NewGuid(),
-                WorkOrderNo = request.WorkOrderNo,
-                WorkflowVersionId = version.Id,
-                Priority = request.Priority,
-                EarliestStartTime = DateTime.UtcNow,
-                Status = WorkOrderStatus.Submitted,
-                CreatedAt = DateTime.UtcNow
-            };
+                var edges = new[]
+                {
+                    new WorkflowEdge { Id = Guid.NewGuid(), WorkflowVersionId = version.Id, FromNodeId = startNode.Id, ToNodeId = scheduleNode.Id },
+                    new WorkflowEdge { Id = Guid.NewGuid(), WorkflowVersionId = version.Id, FromNodeId = scheduleNode.Id, ToNodeId = workstationNode.Id },
+                    new WorkflowEdge { Id = Guid.NewGuid(), WorkflowVersionId = version.Id, FromNodeId = workstationNode.Id, ToNodeId = endNode.Id }
+                };
 
-            var resource = new SchedulingResource
-            {
-                Id = Guid.NewGuid(),
-                Name = $"{request.RequiredResourceType}-A",
-                ResourceType = request.RequiredResourceType
-            };
+                var workOrder = new WorkOrder
+                {
+                    Id = Guid.NewGuid(),
+                    WorkOrderNo = workOrderNo,
+                    WorkflowVersionId = version.Id,
+                    Priority = request.Priority,
+                    EarliestStartTime = DateTime.UtcNow,
+                    Status = WorkOrderStatus.Submitted,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-            _context.Workflows.Add(workflow);
-            _context.WorkflowVersions.Add(version);
-            _context.WorkflowNodes.AddRange(startNode, scheduleNode, workstationNode, endNode);
-            _context.WorkflowEdges.AddRange(edges);
-            _context.WorkOrders.Add(workOrder);
-            _context.SchedulingResources.Add(resource);
-            await _context.SaveChangesAsync(cancellationToken);
+                var resource = new SchedulingResource
+                {
+                    Id = Guid.NewGuid(),
+                    Name = $"{request.RequiredResourceType}-A",
+                    ResourceType = request.RequiredResourceType
+                };
 
-            return new ApiResponse<object>(true, "初始化成功", new
+                _context.Workflows.Add(workflow);
+                _context.WorkflowVersions.Add(version);
+                _context.WorkflowNodes.AddRange(startNode, scheduleNode, workstationNode, endNode);
+                _context.WorkflowEdges.AddRange(edges);
+                _context.WorkOrders.Add(workOrder);
+                _context.SchedulingResources.Add(resource);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return new ApiResponse<object>(true, "初始化成功", new
+                {
+                    WorkflowId = workflow.Id,
+                    WorkflowVersionId = version.Id,
+                    WorkOrderId = workOrder.Id
+                });
+            }
+            catch (Exception ex)
             {
-                WorkflowId = workflow.Id,
-                WorkflowVersionId = version.Id,
-                WorkOrderId = workOrder.Id
-            });
+                return new ApiResponse<object>(false, $"初始化失败: {ex.Message}");
+            }
         }
 
         [HttpPost("start")]

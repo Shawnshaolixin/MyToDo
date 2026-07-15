@@ -3,7 +3,7 @@ namespace MyToDo.Api.Extensions
     public class BootstrapWorkflowRequest
     {
         public string WorkflowName { get; set; } = "Demo Workflow";
-        public string WorkOrderNo { get; set; } = $"WO-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        public string WorkOrderNo { get; set; } = string.Empty;
         public int Priority { get; set; } = 1;
         public string RequiredResourceType { get; set; } = "Workstation";
         public int EstimatedDurationMinutes { get; set; } = 60;

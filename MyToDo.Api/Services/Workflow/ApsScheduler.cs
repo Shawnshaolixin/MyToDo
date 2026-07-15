@@ -49,8 +49,8 @@ namespace MyToDo.Api.Services.Workflow
                 var selected = matchedResources
                     .Select(resource =>
                     {
-                        var hasAvailability = resourceAvailability.TryGetValue(resource.Id, out var nextAvailable);
-                        var candidateStart = MaxTime(task.EarliestStartTime, hasAvailability ? nextAvailable : now);
+                        var hasAvailabilityData = resourceAvailability.TryGetValue(resource.Id, out var nextAvailable);
+                        var candidateStart = MaxTime(task.EarliestStartTime, hasAvailabilityData ? nextAvailable : now);
                         return new { Resource = resource, Start = candidateStart };
                     })
                     .OrderBy(x => x.Start)
