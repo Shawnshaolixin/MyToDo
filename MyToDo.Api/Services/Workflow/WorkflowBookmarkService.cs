@@ -58,6 +58,8 @@ namespace MyToDo.Api.Services.Workflow
 
         public async Task<WorkflowBookmark?> FindAsync(string bookmarkType, string bookmarkKey, CancellationToken cancellationToken)
         {
+            var sanitizedBookmarkType = WorkflowLogSanitizer.Sanitize(bookmarkType);
+            var sanitizedBookmarkKey = WorkflowLogSanitizer.Sanitize(bookmarkKey);
             var bookmark = await _context.WorkflowBookmarks
                 .FirstOrDefaultAsync(x =>
                     x.BookmarkType == bookmarkType &&
@@ -67,8 +69,8 @@ namespace MyToDo.Api.Services.Workflow
 
             _logger.LogInformation(
                 "Workflow bookmark lookup finished. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}, Found={Found}",
-                bookmarkType,
-                bookmarkKey,
+                sanitizedBookmarkType,
+                sanitizedBookmarkKey,
                 bookmark != null);
 
             return bookmark;

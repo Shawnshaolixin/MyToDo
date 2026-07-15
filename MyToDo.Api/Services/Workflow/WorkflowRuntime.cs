@@ -95,18 +95,21 @@ namespace MyToDo.Api.Services.Workflow
         /// </summary>
         public async Task<bool> ResumeAsync(string bookmarkType, string bookmarkKey, object? input, CancellationToken cancellationToken)
         {
+            var sanitizedBookmarkType = WorkflowLogSanitizer.Sanitize(bookmarkType);
+            var sanitizedBookmarkKey = WorkflowLogSanitizer.Sanitize(bookmarkKey);
+
             _logger.LogInformation(
                 "Attempting to resume workflow by bookmark. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
-                bookmarkType,
-                bookmarkKey);
+                sanitizedBookmarkType,
+                sanitizedBookmarkKey);
 
             var bookmark = await _bookmarkService.FindAsync(bookmarkType, bookmarkKey, cancellationToken);
             if (bookmark == null)
             {
                 _logger.LogWarning(
                     "Workflow bookmark not found. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
-                    bookmarkType,
-                    bookmarkKey);
+                    sanitizedBookmarkType,
+                    sanitizedBookmarkKey);
 
                 return false;
             }
@@ -120,8 +123,8 @@ namespace MyToDo.Api.Services.Workflow
                         "Schedulable task is not ready for workflow resume. WorkflowInstanceId={WorkflowInstanceId}, ExecutionTokenId={ExecutionTokenId}, BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}, TaskStatus={TaskStatus}",
                         bookmark.WorkflowInstanceId,
                         bookmark.ExecutionTokenId,
-                        bookmarkType,
-                        bookmarkKey,
+                        sanitizedBookmarkType,
+                        sanitizedBookmarkKey,
                         task?.Status);
 
                     return false;
@@ -151,8 +154,8 @@ namespace MyToDo.Api.Services.Workflow
                 instance.Id,
                 token.Id,
                 nodeInstance.WorkflowNodeId,
-                bookmarkType,
-                bookmarkKey,
+                sanitizedBookmarkType,
+                sanitizedBookmarkKey,
                 instance.Status);
 
             return true;

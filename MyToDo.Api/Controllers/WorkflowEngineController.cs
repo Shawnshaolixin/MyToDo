@@ -41,11 +41,15 @@ namespace MyToDo.Api.Controllers
         {
             try
             {
+                var sanitizedWorkflowName = WorkflowLogSanitizer.Sanitize(request.WorkflowName);
+                var sanitizedWorkOrderNo = WorkflowLogSanitizer.Sanitize(request.WorkOrderNo);
+                var sanitizedRequiredResourceType = WorkflowLogSanitizer.Sanitize(request.RequiredResourceType);
+
                 _logger.LogInformation(
                     "Bootstrapping demo workflow. WorkflowName={WorkflowName}, WorkOrderNo={WorkOrderNo}, RequiredResourceType={RequiredResourceType}",
-                    request.WorkflowName,
-                    request.WorkOrderNo,
-                    request.RequiredResourceType);
+                    sanitizedWorkflowName,
+                    sanitizedWorkOrderNo,
+                    sanitizedRequiredResourceType);
 
                 var workOrderNo = string.IsNullOrWhiteSpace(request.WorkOrderNo)
                     ? $"WO-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..28]
@@ -147,7 +151,7 @@ namespace MyToDo.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to bootstrap demo workflow. WorkflowName={WorkflowName}", request.WorkflowName);
+                _logger.LogError(ex, "Failed to bootstrap demo workflow. WorkflowName={WorkflowName}", WorkflowLogSanitizer.Sanitize(request.WorkflowName));
                 return new ApiResponse<object>(false, $"初始化失败: {ex.Message}");
             }
         }
@@ -219,10 +223,13 @@ namespace MyToDo.Api.Controllers
         [HttpPost("resume")]
         public async Task<ApiResponse<bool>> ResumeAsync([FromBody] ResumeBookmarkRequest request, CancellationToken cancellationToken)
         {
+            var sanitizedBookmarkType = WorkflowLogSanitizer.Sanitize(request.BookmarkType);
+            var sanitizedBookmarkKey = WorkflowLogSanitizer.Sanitize(request.BookmarkKey);
+
             _logger.LogInformation(
                 "Resuming workflow through API. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
-                request.BookmarkType,
-                request.BookmarkKey);
+                sanitizedBookmarkType,
+                sanitizedBookmarkKey);
 
             var resumed = await _workflowRuntime.ResumeAsync(request.BookmarkType, request.BookmarkKey, request.Input, cancellationToken);
 
@@ -230,8 +237,8 @@ namespace MyToDo.Api.Controllers
             {
                 _logger.LogWarning(
                     "Workflow resume request did not match any active bookmark. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
-                    request.BookmarkType,
-                    request.BookmarkKey);
+                    sanitizedBookmarkType,
+                    sanitizedBookmarkKey);
             }
 
             return new ApiResponse<bool>(resumed, resumed ? "恢复成功" : "未找到可恢复的书签", resumed);
