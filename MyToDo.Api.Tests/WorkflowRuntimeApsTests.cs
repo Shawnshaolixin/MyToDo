@@ -2,11 +2,27 @@ using Microsoft.EntityFrameworkCore;
 using MyToDo.Api.Context;
 using MyToDo.Api.Entities.Workflow;
 using MyToDo.Api.Services.Workflow;
+using MyToDo.Api.Services.Workflow.Executors;
 
 namespace MyToDo.Api.Tests
 {
     public class WorkflowRuntimeApsTests
     {
+        private static WorkflowRuntime BuildRuntime(MyToDoContext context)
+        {
+            var bookmarkService = new WorkflowBookmarkService(context);
+            var gateway = new FakeWorkstationGateway();
+            var executors = new IWorkflowNodeExecutor[]
+            {
+                new StartNodeExecutor(),
+                new EndNodeExecutor(),
+                new ScheduleTaskNodeExecutor(bookmarkService),
+                new WorkstationTaskNodeExecutor(bookmarkService, gateway)
+            };
+            var registry = new WorkflowNodeExecutorRegistry(executors);
+            return new WorkflowRuntime(context, registry, bookmarkService);
+        }
+
         [Fact]
         public async Task Runtime_WithApsScheduler_CompletesMinimalWorkflow()
         {
@@ -17,7 +33,7 @@ namespace MyToDo.Api.Tests
             await using var context = new MyToDoContext(options);
             await SeedWorkflowAsync(context);
 
-            var runtime = new WorkflowRuntime(context);
+            var runtime = BuildRuntime(context);
             var scheduler = new ApsScheduler(context);
 
             var workOrder = await context.WorkOrders.SingleAsync();
