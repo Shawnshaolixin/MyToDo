@@ -29,6 +29,12 @@ namespace MyToDo.Api.Context
         public DbSet<SchedulableTask> SchedulableTasks { get; set; }
         public DbSet<ScheduleResult> ScheduleResults { get; set; }
 
+        // Workstation runtime entities
+        public DbSet<Workstation> Workstations { get; set; }
+        public DbSet<WorkstationTaskInstance> WorkstationTaskInstances { get; set; }
+        public DbSet<WorkstationEvent> WorkstationEvents { get; set; }
+        public DbSet<WorkstationPrompt> WorkstationPrompts { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -256,6 +262,60 @@ namespace MyToDo.Api.Context
                     .WithMany()
                     .HasForeignKey(e => e.ResourceId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ── Workstation runtime entities ──────────────────────────────────
+
+            modelBuilder.Entity<Workstation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(64);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
+                entity.Property(e => e.Endpoint).HasMaxLength(256);
+                entity.HasIndex(e => e.Code).IsUnique();
+            });
+
+            modelBuilder.Entity<WorkstationTaskInstance>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Stage).HasConversion<string>().IsRequired();
+                entity.Property(e => e.ExperimentDefinitionId).HasMaxLength(128);
+                entity.Property(e => e.DeviceJobId).HasMaxLength(128);
+                entity.HasIndex(e => e.WorkflowNodeInstanceId);
+                entity.HasIndex(e => e.DeviceJobId);
+                entity.HasOne(e => e.Workstation)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkstationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.WorkflowNodeInstance)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowNodeInstanceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<WorkstationEvent>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DeviceJobId).IsRequired().HasMaxLength(128);
+                entity.Property(e => e.EventType).HasConversion<string>().IsRequired();
+                entity.HasIndex(e => new { e.WorkstationId, e.DeviceJobId });
+                entity.HasIndex(e => e.ReceivedAt);
+                entity.HasOne(e => e.Workstation)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkstationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<WorkstationPrompt>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PromptCode).IsRequired().HasMaxLength(64);
+                entity.Property(e => e.Status).HasConversion<string>().IsRequired();
+                entity.HasIndex(e => new { e.WorkstationTaskInstanceId, e.Status });
+                entity.HasOne(e => e.WorkstationTaskInstance)
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkstationTaskInstanceId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
