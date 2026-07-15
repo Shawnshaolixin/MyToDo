@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MyToDo.Api.Context;
 using MyToDo.Api.Entities.Workflow;
 using MyToDo.Api.Extensions;
@@ -7,6 +8,10 @@ using MyToDo.Api.Services.Workflow;
 
 namespace MyToDo.Api.Controllers
 {
+    /// <summary>
+    /// 工作流调试与演示入口。
+    /// 负责初始化示例流程、启动流程、触发排程恢复，以及查询流程实例状态。
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class WorkflowEngineController : ControllerBase
@@ -14,22 +19,34 @@ namespace MyToDo.Api.Controllers
         private readonly MyToDoContext _context;
         private readonly IWorkflowRuntime _workflowRuntime;
         private readonly IApsScheduler _apsScheduler;
+        private readonly ILogger<WorkflowEngineController> _logger;
 
         public WorkflowEngineController(
             MyToDoContext context,
             IWorkflowRuntime workflowRuntime,
-            IApsScheduler apsScheduler)
+            IApsScheduler apsScheduler,
+            ILogger<WorkflowEngineController> logger)
         {
             _context = context;
             _workflowRuntime = workflowRuntime;
             _apsScheduler = apsScheduler;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// 创建一条最小可运行的演示流程及其工单，便于联调工作流、排程和工位回调链路。
+        /// </summary>
         [HttpPost("bootstrap")]
         public async Task<ApiResponse<object>> BootstrapAsync([FromBody] BootstrapWorkflowRequest request, CancellationToken cancellationToken)
         {
             try
             {
+                _logger.LogInformation(
+                    "Bootstrapping demo workflow. WorkflowName={WorkflowName}, WorkOrderNo={WorkOrderNo}, RequiredResourceType={RequiredResourceType}",
+                    request.WorkflowName,
+                    request.WorkOrderNo,
+                    request.RequiredResourceType);
+
                 var workOrderNo = string.IsNullOrWhiteSpace(request.WorkOrderNo)
                     ? $"WO-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..28]
                     : request.WorkOrderNo;
@@ -115,6 +132,12 @@ namespace MyToDo.Api.Controllers
                 _context.SchedulingResources.Add(resource);
                 await _context.SaveChangesAsync(cancellationToken);
 
+                _logger.LogInformation(
+                    "Demo workflow bootstrapped. WorkflowId={WorkflowId}, WorkflowVersionId={WorkflowVersionId}, WorkOrderId={WorkOrderId}",
+                    workflow.Id,
+                    version.Id,
+                    workOrder.Id);
+
                 return new ApiResponse<object>(true, "初始化成功", new
                 {
                     WorkflowId = workflow.Id,
@@ -124,29 +147,57 @@ namespace MyToDo.Api.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to bootstrap demo workflow. WorkflowName={WorkflowName}", request.WorkflowName);
                 return new ApiResponse<object>(false, $"初始化失败: {ex.Message}");
             }
         }
 
+        /// <summary>
+        /// 启动指定工单对应的流程版本。
+        /// 启动后流程会自动推进，直到遇到等待点或直接结束。
+        /// </summary>
         [HttpPost("start")]
         public async Task<ApiResponse<object>> StartAsync([FromBody] StartWorkflowRequest request, CancellationToken cancellationToken)
         {
+            _logger.LogInformation(
+                "Starting workflow through API. WorkOrderId={WorkOrderId}, WorkflowVersionId={WorkflowVersionId}",
+                request.WorkOrderId,
+                request.WorkflowVersionId);
+
             var instance = await _workflowRuntime.StartAsync(request.WorkOrderId, request.WorkflowVersionId, cancellationToken);
+
+            _logger.LogInformation(
+                "Workflow started through API. WorkflowInstanceId={WorkflowInstanceId}, WorkOrderId={WorkOrderId}",
+                instance.Id,
+                request.WorkOrderId);
+
             return new ApiResponse<object>(true, "流程启动成功", new { WorkflowInstanceId = instance.Id });
         }
 
+        /// <summary>
+        /// 执行一次 APS 排程，并把已成功排程的任务结果回填到等待中的流程实例。
+        /// </summary>
         [HttpPost("schedule")]
         public async Task<ApiResponse<object>> ScheduleAsync(CancellationToken cancellationToken)
         {
             var results = await _apsScheduler.ScheduleAsync(cancellationToken);
 
+            _logger.LogInformation("APS scheduling finished. ScheduledCount={ScheduledCount}", results.Count);
+
             foreach (var result in results)
             {
-                await _workflowRuntime.ResumeAsync(
+                var resumed = await _workflowRuntime.ResumeAsync(
                     WorkflowBookmarkTypes.ScheduleTaskScheduled,
                     result.SchedulableTaskId.ToString(),
                     result,
                     cancellationToken);
+
+                _logger.LogInformation(
+                    "Processed scheduled task resume. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}, Resumed={Resumed}, ResourceId={ResourceId}",
+                    WorkflowBookmarkTypes.ScheduleTaskScheduled,
+                    result.SchedulableTaskId,
+                    resumed,
+                    result.ResourceId);
             }
 
             return new ApiResponse<object>(true, "排程执行完成", new
@@ -162,13 +213,33 @@ namespace MyToDo.Api.Controllers
             });
         }
 
+        /// <summary>
+        /// 手动按书签恢复流程，适合模拟外部系统回调或事件到达场景。
+        /// </summary>
         [HttpPost("resume")]
         public async Task<ApiResponse<bool>> ResumeAsync([FromBody] ResumeBookmarkRequest request, CancellationToken cancellationToken)
         {
+            _logger.LogInformation(
+                "Resuming workflow through API. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
+                request.BookmarkType,
+                request.BookmarkKey);
+
             var resumed = await _workflowRuntime.ResumeAsync(request.BookmarkType, request.BookmarkKey, request.Input, cancellationToken);
+
+            if (!resumed)
+            {
+                _logger.LogWarning(
+                    "Workflow resume request did not match any active bookmark. BookmarkType={BookmarkType}, BookmarkKey={BookmarkKey}",
+                    request.BookmarkType,
+                    request.BookmarkKey);
+            }
+
             return new ApiResponse<bool>(resumed, resumed ? "恢复成功" : "未找到可恢复的书签", resumed);
         }
 
+        /// <summary>
+        /// 查询流程实例当前状态，便于查看挂起书签和排程任务的运行情况。
+        /// </summary>
         [HttpGet("instances/{instanceId:guid}")]
         public async Task<ApiResponse<object>> GetInstanceStatusAsync(Guid instanceId, CancellationToken cancellationToken)
         {

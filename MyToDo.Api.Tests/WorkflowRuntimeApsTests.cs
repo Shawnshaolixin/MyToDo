@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using MyToDo.Api.Context;
 using MyToDo.Api.Entities.Workflow;
 using MyToDo.Api.Services.Workflow;
@@ -141,16 +142,16 @@ namespace MyToDo.Api.Tests
 
         private static WorkflowRuntime CreateRuntime(MyToDoContext context)
         {
-            var bookmarkService = new WorkflowBookmarkService(context);
+            var bookmarkService = new WorkflowBookmarkService(context, NullLogger<WorkflowBookmarkService>.Instance);
             var registry = new WorkflowNodeExecutorRegistry(
             [
                 new StartNodeExecutor(),
                 new EndNodeExecutor(),
-                new ScheduleTaskNodeExecutor(context),
-                new WorkstationTaskExecutor(new FakeWorkstationGateway())
+                new ScheduleTaskNodeExecutor(context, NullLogger<ScheduleTaskNodeExecutor>.Instance),
+                new WorkstationTaskExecutor(new FakeWorkstationGateway(), NullLogger<WorkstationTaskExecutor>.Instance)
             ]);
 
-            return new WorkflowRuntime(context, registry, bookmarkService);
+            return new WorkflowRuntime(context, registry, bookmarkService, NullLogger<WorkflowRuntime>.Instance);
         }
     }
 }
